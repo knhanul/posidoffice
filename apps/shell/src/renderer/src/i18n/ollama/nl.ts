@@ -31,4 +31,5 @@ export const nl = {
   localLocked: 'Een Ollama-server die op deze pc draait, kan niet worden verwijderd.',
   connectTimeout: 'Time-out eerste reactie (minuten)',
   connectTimeoutHint: 'Verhoog de waarde voor servers die modellen traag laden.',
+  visionBadge: 'Visie',
 } satisfies Record<keyof typeof zh, string>

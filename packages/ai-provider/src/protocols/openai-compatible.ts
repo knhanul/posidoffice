@@ -166,6 +166,14 @@ export async function streamOpenAiCompatible(
   cb: StreamCallbacks,
   options: OpenAiRequestOptions = {},
 ): Promise<void> {
+  if (
+    config.vision === false &&
+    messages.some((m) => m.role === 'user' && m.images && m.images.length > 0)
+  ) {
+    throw new Error(
+      'The selected model does not support image input. Remove the image and try again, or choose a model that supports images.',
+    )
+  }
   const wd = createStreamWatchdog(cb.signal, config.connectTimeoutMs)
   return wd.guard(() =>
     openAiCompatibleTurn(baseUrl, config, system, messages, tools, maxTokens, cb, wd, {

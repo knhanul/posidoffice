@@ -30,4 +30,5 @@ export const ms = {
   localLocked: 'Pelayan Ollama yang berjalan pada PC ini tidak boleh dipadamkan.',
   connectTimeout: 'Had masa respons pertama (minit)',
   connectTimeoutHint: 'Naikkan nilai untuk pelayan yang lambat memuatkan model.',
+  visionBadge: 'Penglihatan',
 } satisfies Record<keyof typeof zh, string>

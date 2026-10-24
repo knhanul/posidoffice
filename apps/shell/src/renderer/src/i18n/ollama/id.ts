@@ -30,4 +30,5 @@ export const id = {
   localLocked: 'Server Ollama yang berjalan di PC ini tidak dapat dihapus.',
   connectTimeout: 'Batas waktu respons pertama (menit)',
   connectTimeoutHint: 'Naikkan nilai untuk server yang lambat memuat model.',
+  visionBadge: 'Visi',
 } satisfies Record<keyof typeof zh, string>

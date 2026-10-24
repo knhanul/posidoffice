@@ -117,7 +117,10 @@ import {
   type AiSubscriptionProviderId,
 } from '@genoffice/ai-provider'
 import { listCodexModels, shutdownCodexAppServers } from '@genoffice/ai-provider/codex-app-server'
-import { listCustomModelsForIpc } from '@genoffice/ai-provider/custom-models'
+import {
+  listCustomModelsForIpc,
+  showOllamaModelForIpc,
+} from '@genoffice/ai-provider/custom-models'
 import {
   ensureSubscriptionIpc,
   initSubscriptionChildTracking,
@@ -3868,6 +3871,8 @@ export function registerAiIpc(): void {
   })
 
   ipcMain.handle('ai:custom-models', (_event, input: unknown) => listCustomModelsForIpc(input))
+
+  ipcMain.handle('ai:ollama-show', (_event, input: unknown) => showOllamaModelForIpc(input))
 
   ipcMain.handle('ai:stream', async (event, request: AiStreamRequest) => {
     // per-request settings get the same schema check as the persisted ones: a

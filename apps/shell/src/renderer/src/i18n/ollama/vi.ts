@@ -30,4 +30,5 @@ export const vi = {
   localLocked: 'Không thể xóa máy chủ Ollama đang chạy trên PC này.',
   connectTimeout: 'Thời gian chờ phản hồi đầu tiên (phút)',
   connectTimeoutHint: 'Tăng giá trị cho các máy chủ tải mô hình chậm.',
+  visionBadge: 'Thị giác',
 } satisfies Record<keyof typeof zh, string>

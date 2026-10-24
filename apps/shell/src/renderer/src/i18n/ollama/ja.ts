@@ -32,4 +32,5 @@ export const ja = {
   localLocked: 'この PC で実行中の Ollama は削除できません。',
   connectTimeout: '初回応答タイムアウト（分）',
   connectTimeoutHint: 'モデルの読み込みに時間がかかるサーバーでは値を大きくしてください。',
+  visionBadge: 'ビジョン',
 } satisfies Record<keyof typeof zh, string>

@@ -134,6 +134,11 @@ export interface AiProviderConfig {
   effort?: AiModelEffort | undefined
   /** connect timeout until the first response byte; unset falls back to AI_CONNECT_TIMEOUT_MS */
   connectTimeoutMs?: number | undefined
+  /**
+   * image input support probed from the endpoint itself (Ollama `/api/show`);
+   * unset means not checked — the request path assumes images are accepted
+   */
+  vision?: boolean | undefined
 }
 
 /** One user-hosted OpenAI-compatible server; the active one is mirrored into `providers.custom` */
@@ -148,6 +153,8 @@ export interface AiCustomEndpoint {
   effort?: AiModelEffort | undefined
   /** connect timeout until the first response byte; Ollama endpoints default to OLLAMA_CONNECT_TIMEOUT_MS */
   connectTimeoutMs?: number | undefined
+  /** image input probed via Ollama `/api/show` at registration; unset means not checked */
+  vision?: boolean | undefined
 }
 
 /** Live picker data returned by Codex app-server's model/list method. */
@@ -156,6 +163,14 @@ export interface CodexModelCatalog {
   defaultModel: string
   /** Custom servers: a valid /models response, including an empty catalogue. */
   reachable?: boolean | undefined
+}
+
+/** What an Ollama `POST /api/show` answered for one model. */
+export interface OllamaModelInfo {
+  /** `capabilities` contained "vision" — the model takes image input */
+  vision: boolean
+  /** capabilities as the server reported them; empty when the probe did not run (not Ollama, offline, unknown model) */
+  capabilities: string[]
 }
 
 /** Server metadata; only registered models enter the custom endpoint picker. */

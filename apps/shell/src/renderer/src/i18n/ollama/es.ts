@@ -31,4 +31,5 @@ export const es = {
   localLocked: 'No se puede eliminar un servidor Ollama que se ejecuta en este PC.',
   connectTimeout: 'Tiempo de espera de la primera respuesta (minutos)',
   connectTimeoutHint: 'Aumente el valor en servidores que tardan en cargar los modelos.',
+  visionBadge: 'Visión',
 } satisfies Record<keyof typeof zh, string>

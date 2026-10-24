@@ -30,4 +30,5 @@ export const cs = {
   localLocked: 'Server Ollama běžící na tomto počítači nelze odebrat.',
   connectTimeout: 'Časový limit první odpovědi (minuty)',
   connectTimeoutHint: 'Zvyšte hodnotu u serverů, které dlouho načítají modely.',
+  visionBadge: 'Vidění',
 } satisfies Record<keyof typeof zh, string>

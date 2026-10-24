@@ -30,4 +30,5 @@ export const ko = {
   localLocked: '이 PC에서 실행 중인 Ollama는 삭제할 수 없습니다.',
   connectTimeout: '첫 응답 대기 시간 (분)',
   connectTimeoutHint: '모델을 메모리에 올리는 데 오래 걸리는 서버는 값을 늘리세요.',
+  visionBadge: '비전',
 } satisfies Record<keyof typeof zh, string>

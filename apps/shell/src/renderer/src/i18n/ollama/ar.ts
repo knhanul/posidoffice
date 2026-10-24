@@ -30,4 +30,5 @@ export const ar = {
   localLocked: 'لا يمكن حذف خادم Ollama الذي يعمل على هذا الكمبيوتر.',
   connectTimeout: 'مهلة الاستجابة الأولى (دقائق)',
   connectTimeoutHint: 'ارفع القيمة للخوادم التي تحمّل النماذج ببطء.',
+  visionBadge: 'رؤية',
 } satisfies Record<keyof typeof zh, string>

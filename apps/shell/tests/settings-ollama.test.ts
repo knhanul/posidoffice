@@ -125,6 +125,7 @@ let root: Root
 let stored: AiSettings
 let writes: ReturnType<typeof vi.fn>
 let pending: Array<{ url: string; key?: string; resolve: (catalog: CodexModelCatalog) => void }>
+let visionMap: Record<string, { vision: boolean; capabilities: string[] }>
 let changed: (() => void) | undefined
 
 beforeEach(() => {
@@ -133,6 +134,7 @@ beforeEach(() => {
   ).IS_REACT_ACT_ENVIRONMENT = true
   stored = { ...defaultAiSettings(), ollamaServers: [] }
   pending = []
+  visionMap = {}
   writes = vi.fn(async (next: AiSettings) => {
     stored = normalizeAiSettings(sanitizeAiSettings(next))
   })
@@ -141,6 +143,8 @@ beforeEach(() => {
     setAiSettings: writes,
     getCustomModels: (url: string, key?: string) =>
       new Promise<CodexModelCatalog>((resolve) => pending.push({ url, key, resolve })),
+    getOllamaModelInfo: async (_url: string, model: string) =>
+      visionMap[model] ?? { vision: false, capabilities: [] },
     onAiSettingsChanged: (listener: () => void) => {
       changed = listener
       return () => {
@@ -311,6 +315,26 @@ describe('Ollama settings pane', () => {
     expect(stored.ollamaServers?.map((s) => s.id)).toEqual(['local'])
     expect(host.textContent).toContain('Local')
     expect(host.textContent).not.toContain('LAN')
+  })
+
+  it('shows a vision badge on models that take images and stores it on registration', async () => {
+    stored = saveOllamaServer(defaultAiSettings(), server)
+    visionMap.qwen = { vision: true, capabilities: ['completion', 'vision'] }
+    visionMap.texto = { vision: false, capabilities: ['completion'] }
+    await render()
+    await answer(0, ['qwen', 'texto'])
+    await act(async () => {})
+    const rows = host.querySelectorAll('li.ollama-model-row')
+    expect(rows).toHaveLength(2)
+    expect(rows[0]!.querySelector('.ollama-vision-badge')).not.toBeNull()
+    expect(rows[1]!.querySelector('.ollama-vision-badge')).toBeNull()
+    await click('Register', rows[0]!)
+    expect(stored.customEndpoints?.[0]?.vision).toBe(true)
+    await click('Register', rows[1]!)
+    expect(stored.customEndpoints?.[1]?.vision).toBe(false)
+    const registered = host.querySelectorAll('li.ollama-registered-row')
+    expect(registered[0]!.querySelector('.ollama-vision-badge')).not.toBeNull()
+    expect(registered[1]!.querySelector('.ollama-vision-badge')).toBeNull()
   })
 
   it('restores the local card when a running local Ollama answers', async () => {

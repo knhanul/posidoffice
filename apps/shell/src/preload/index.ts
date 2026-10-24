@@ -10,7 +10,11 @@ import {
   freeAiQuotaOf,
   getProviderAdapter,
 } from '@genoffice/ai-provider/browser'
-import type { AiSettings, CodexModelCatalog } from '@genoffice/ai-provider/browser'
+import type {
+  AiSettings,
+  CodexModelCatalog,
+  OllamaModelInfo,
+} from '@genoffice/ai-provider/browser'
 import { installDropOpenBridge } from '@genoffice/electron-utils/drop-open'
 import { userSkillsBridge } from '@genoffice/electron-utils/user-skills-bridge'
 import { USER_SKILLS_BRIDGE_KEY } from '@genoffice/electron-utils/user-skills-channels'
@@ -533,6 +537,13 @@ const homeApi: HomeApi = {
   },
   async getCustomModels(baseUrl, apiKey) {
     return (await ipcRenderer.invoke('ai:custom-models', { baseUrl, apiKey })) as CodexModelCatalog
+  },
+  async getOllamaModelInfo(baseUrl, model, apiKey) {
+    return (await ipcRenderer.invoke('ai:ollama-show', {
+      baseUrl,
+      model,
+      apiKey,
+    })) as OllamaModelInfo
   },
   async testAiSettings(settings) {
     const result: unknown = await ipcRenderer.invoke('ai:chat', {

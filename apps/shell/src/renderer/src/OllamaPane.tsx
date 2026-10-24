@@ -6,7 +6,12 @@ import {
   ollamaBaseUrl,
   prettyModelName,
 } from '@genoffice/ai-provider/browser'
-import type { AiModelEffort, AiOllamaServer, AiSettings } from '@genoffice/ai-provider/browser'
+import type {
+  AiModelEffort,
+  AiOllamaServer,
+  AiSettings,
+  OllamaModelInfo,
+} from '@genoffice/ai-provider/browser'
 import { useI18n } from './locale'
 import { ollamaText, type OllamaStringKey } from './i18n/strings-ollama'
 import { changeAiSettings, readAiSettings } from './settings-ai'
@@ -179,6 +184,31 @@ function ServerCard({
       alive = false
     }
   }, [baseUrl, apiKey, refresh])
+  const [modelInfo, setModelInfo] = useState<Record<string, OllamaModelInfo>>({})
+  useEffect(() => {
+    const models = catalog?.status === 'ok' ? catalog.models : []
+    if (models.length === 0) {
+      setModelInfo({})
+      return
+    }
+    let alive = true
+    const probe = window.aiOffice.getOllamaModelInfo
+    if (!probe) return
+    void Promise.all(models.map((m) => probe(baseUrl, m, apiKey))).then(
+      (infos) => {
+        if (!alive) return
+        const map: Record<string, OllamaModelInfo> = {}
+        models.forEach((m, i) => {
+          map[m] = infos[i]!
+        })
+        setModelInfo(map)
+      },
+      () => {},
+    )
+    return () => {
+      alive = false
+    }
+  }, [catalog, baseUrl, apiKey])
   const current =
     catalog?.baseUrl === server.baseUrl && catalog.apiKey === server.apiKey ? catalog : null
   const status = current?.status ?? 'loading'
@@ -323,7 +353,12 @@ function ServerCard({
               return (
                 <li key={model} className="ollama-model-row">
                   <div className="ollama-model-header">
-                    <span className="ollama-model-title">{pretty}</span>
+                    <span className="ollama-model-title">
+                      {pretty}
+                      {modelInfo[model]?.vision === true && (
+                        <span className="ollama-vision-badge">{t('visionBadge')}</span>
+                      )}
+                    </span>
                     {pretty !== model && <span className="ollama-model-raw">{model}</span>}
                   </div>
                   <div className="ollama-model-actions">
@@ -359,8 +394,11 @@ function ServerCard({
                           if (live?.baseUrl !== server.baseUrl || live.apiKey !== server.apiKey)
                             return latest
                           let updated = latest
+                          const info = modelInfo[model]
+                          const vision =
+                            info && info.capabilities.length > 0 ? info.vision : undefined
                           for (const eff of toRegister) {
-                            updated = registerOllamaModel(updated, server.id, model, eff)
+                            updated = registerOllamaModel(updated, server.id, model, eff, vision)
                           }
                           return updated
                         })
@@ -385,7 +423,12 @@ function ServerCard({
               return (
                 <li key={endpoint.id} className="ollama-registered-row">
                   <div className="ollama-registered-info">
-                    <span className="ollama-registered-title">{label}</span>
+                    <span className="ollama-registered-title">
+                      {label}
+                      {endpoint.vision === true && (
+                        <span className="ollama-vision-badge">{t('visionBadge')}</span>
+                      )}
+                    </span>
                     <span className="ollama-model-raw">{endpoint.model}</span>
                   </div>
                   <button

@@ -66,6 +66,7 @@ export function registerOllamaModel(
   serverId: string,
   model: string,
   effort?: AiModelEffort,
+  vision?: boolean,
 ): AiSettings {
   let next = resolveCustomEndpoints(settings)
   const server = next.ollamaServers?.find((s) => s.id === serverId)
@@ -96,6 +97,7 @@ export function registerOllamaModel(
     models: [model],
     ...(effort ? { effort } : {}),
     connectTimeoutMs: server.connectTimeoutMs ?? OLLAMA_CONNECT_TIMEOUT_MS,
+    ...(vision !== undefined ? { vision } : {}),
   })
   // Adding to the catalogue must not switch an already selected Custom model.
   if (active) next = selectCustomEndpoint(next, active)

@@ -8,7 +8,7 @@
 // failure, which is right for a chat turn and wrong for a background probe of a
 // local server that is very often simply not running. The user agent it would
 // have added is still set, since gateways reject a bare `node`.
-import type { CodexModelCatalog } from './types'
+import type { CodexModelCatalog, OllamaModelInfo } from './types'
 import { withUserAgent } from './fetch'
 import { endpointUrl, readCappedResponseText } from './protocols/shared'
 import { createStreamWatchdog } from './watchdog'
@@ -96,6 +96,69 @@ export function listCustomModelsForIpc(input: unknown): Promise<CodexModelCatalo
   const raw = (input ?? {}) as { baseUrl?: unknown; apiKey?: unknown }
   return listCustomModels(
     typeof raw.baseUrl === 'string' ? raw.baseUrl : '',
+    typeof raw.apiKey === 'string' ? raw.apiKey : undefined,
+  )
+}
+
+const NO_MODEL_INFO: OllamaModelInfo = { vision: false, capabilities: [] }
+
+/**
+ * What one Ollama model can do, from `POST {origin}/api/show` — the OpenAI-
+ * compatible `/models` list carries ids only. `capabilities` is empty when the
+ * server is not Ollama, the model is unknown, or the probe fails, so callers
+ * should treat it as "not checked" rather than "text-only".
+ * Never throws, for the same reason `listCustomModels` does not.
+ */
+export async function showOllamaModel(
+  baseUrl: string,
+  model: string,
+  apiKey?: string,
+): Promise<OllamaModelInfo> {
+  const name = model.trim().slice(0, 256)
+  if (!name) return NO_MODEL_INFO
+  let origin: string
+  try {
+    origin = new URL(baseUrl.trim()).origin
+  } catch {
+    return NO_MODEL_INFO
+  }
+  const key = (apiKey ?? '').trim()
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+    'Content-Type': 'application/json',
+  }
+  if (key) headers.Authorization = `Bearer ${key}`
+  const watchdog = createStreamWatchdog(undefined, REQUEST_TIMEOUT_MS)
+  try {
+    return await watchdog.guard(async () => {
+      const response = await fetch(
+        `${origin}/api/show`,
+        withUserAgent({
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ model: name }),
+          signal: watchdog.signal,
+        }),
+      )
+      if (!response.ok) return NO_MODEL_INFO
+      const text = await readCappedResponseText(response, { maxBytes: MAX_BODY_BYTES })
+      const body = JSON.parse(text) as { capabilities?: unknown } | null
+      const capabilities = Array.isArray(body?.capabilities)
+        ? body.capabilities.filter((c): c is string => typeof c === 'string')
+        : []
+      return { vision: capabilities.includes('vision'), capabilities }
+    })
+  } catch {
+    return NO_MODEL_INFO
+  }
+}
+
+/** `showOllamaModel` behind an `unknown` IPC payload, like `listCustomModelsForIpc`. */
+export function showOllamaModelForIpc(input: unknown): Promise<OllamaModelInfo> {
+  const raw = (input ?? {}) as { baseUrl?: unknown; model?: unknown; apiKey?: unknown }
+  return showOllamaModel(
+    typeof raw.baseUrl === 'string' ? raw.baseUrl : '',
+    typeof raw.model === 'string' ? raw.model : '',
     typeof raw.apiKey === 'string' ? raw.apiKey : undefined,
   )
 }

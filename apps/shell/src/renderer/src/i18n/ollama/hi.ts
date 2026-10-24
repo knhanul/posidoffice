@@ -30,4 +30,5 @@ export const hi = {
   localLocked: 'इस PC पर चल रहे Ollama सर्वर को हटाया नहीं जा सकता.',
   connectTimeout: 'पहली प्रतिक्रिया समयसीमा (मिनट)',
   connectTimeoutHint: 'धीरे से मॉडल लोड करने वाले सर्वरों के लिए मान बढ़ाएँ.',
+  visionBadge: 'दृष्टि',
 } satisfies Record<keyof typeof zh, string>

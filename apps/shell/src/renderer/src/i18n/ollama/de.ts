@@ -31,4 +31,5 @@ export const de = {
   localLocked: 'Ein auf diesem PC laufender Ollama-Server kann nicht entfernt werden.',
   connectTimeout: 'Zeitlimit für die erste Antwort (Minuten)',
   connectTimeoutHint: 'Erhöhen Sie den Wert für Server, die Modelle langsam laden.',
+  visionBadge: 'Vision',
 } satisfies Record<keyof typeof zh, string>

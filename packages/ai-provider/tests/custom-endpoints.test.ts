@@ -15,6 +15,8 @@ import { sanitizeAiSettings } from '../src/ai-settings-guard'
 import { defaultAiSettings, resolveAiSettings } from '../src/providers'
 import { normalizeAiSettings } from '../src/legacy-settings'
 import { normalizeOllamaServers, ollamaBaseUrl } from '../src/ollama-servers'
+import { showOllamaModel } from '../src/custom-models'
+import { jsonResponse } from './test-utils'
 import type { AiCustomEndpoint } from '../src/types'
 
 const ollama: AiCustomEndpoint = {
@@ -284,6 +286,76 @@ describe('connect timeout', () => {
     })
     expect(weird?.customEndpoints?.[0]?.connectTimeoutMs).toBeUndefined()
     expect(weird?.customEndpoints?.[1]?.connectTimeoutMs).toBe(600_000)
+  })
+})
+
+describe('showOllamaModel', () => {
+  it('reads vision from /api/show capabilities and fails safe', async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) =>
+      jsonResponse({ capabilities: ['completion', 'thinking', 'vision'] }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    const info = await showOllamaModel('http://localhost:11434/v1', 'gemma3')
+    expect(String(fetchMock.mock.calls[0]![0])).toBe('http://localhost:11434/api/show')
+    expect(fetchMock.mock.calls[0]![1]?.method).toBe('POST')
+    expect(JSON.parse(String(fetchMock.mock.calls[0]![1]?.body))).toEqual({ model: 'gemma3' })
+    expect(info).toEqual({ vision: true, capabilities: ['completion', 'thinking', 'vision'] })
+
+    vi.stubGlobal('fetch', vi.fn(async () => jsonResponse({ capabilities: ['completion'] })))
+    expect((await showOllamaModel('http://localhost:11434/v1', 'llama3')).vision).toBe(false)
+    vi.stubGlobal('fetch', vi.fn(async () => jsonResponse({})))
+    expect(await showOllamaModel('http://localhost:11434/v1', 'x')).toEqual({
+      vision: false,
+      capabilities: [],
+    })
+    vi.stubGlobal('fetch', vi.fn(async () => Promise.reject(new Error('down'))))
+    expect(await showOllamaModel('http://localhost:11434/v1', 'x')).toEqual({
+      vision: false,
+      capabilities: [],
+    })
+    expect(await showOllamaModel('not a url', 'x')).toEqual({ vision: false, capabilities: [] })
+    vi.unstubAllGlobals()
+  })
+})
+
+describe('streamOpenAiCompatible vision gating', () => {
+  it('refuses to send images to an endpoint probed vision:false', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse({}))
+    vi.stubGlobal('fetch', fetchMock)
+    await expect(
+      streamOpenAiCompatible(
+        'http://localhost:11434/v1',
+        { apiKey: '', model: 'llama3', vision: false },
+        'sys',
+        [{ role: 'user', text: 'hi', images: [{ mime: 'image/png', base64: 'aGk=' }] }],
+        [],
+        100,
+        { signal: new AbortController().signal, onDelta: () => {}, onToolCall: () => {} },
+      ),
+    ).rejects.toThrow(/does not support image input/i)
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('still sends images when vision is true or unchecked', async () => {
+    const fetchMock = vi.fn(async (_url: string, init: RequestInit) => {
+      const body = JSON.parse(init.body as string)
+      expect(JSON.stringify(body.messages)).toContain('image_url')
+      return okResponse(
+        sseStream(['data: {"choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}]}', 'data: [DONE]']),
+      )
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    for (const vision of [true, undefined]) {
+      await streamOpenAiCompatible(
+        'http://localhost:11434/v1',
+        { apiKey: '', model: 'qwen-vl', ...(vision !== undefined ? { vision } : {}) },
+        'sys',
+        [{ role: 'user', text: 'hi', images: [{ mime: 'image/png', base64: 'aGk=' }] }],
+        [],
+        100,
+        { signal: new AbortController().signal, onDelta: () => {}, onToolCall: () => {} },
+      )
+    }
   })
 })
 

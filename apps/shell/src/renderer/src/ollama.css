@@ -198,6 +198,19 @@
   overflow-wrap: anywhere;
 }
 
+.ollama-vision-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 16px;
+  color: var(--text-secondary);
+  vertical-align: middle;
+}
+
 .ollama-model-actions {
   display: flex;
   align-items: center;

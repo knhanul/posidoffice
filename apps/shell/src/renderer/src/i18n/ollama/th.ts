@@ -30,4 +30,5 @@ export const th = {
   localLocked: 'ไม่สามารถลบเซิร์ฟเวอร์ Ollama ที่กำลังทำงานบนพีซีเครื่องนี้ได้',
   connectTimeout: 'เวลารอการตอบกลับครั้งแรก (นาที)',
   connectTimeoutHint: 'เพิ่มค่าสำหรับเซิร์ฟเวอร์ที่โหลดโมเดลช้า',
+  visionBadge: 'ภาพ',
 } satisfies Record<keyof typeof zh, string>

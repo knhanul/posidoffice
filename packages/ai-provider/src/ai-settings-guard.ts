@@ -101,6 +101,7 @@ function sanitizeProviderConfig(input: unknown): AiProviderConfig {
   }
   const connectTimeoutMs = connectTimeoutMsOf(raw.connectTimeoutMs)
   if (connectTimeoutMs !== undefined) config.connectTimeoutMs = connectTimeoutMs
+  if (typeof raw.vision === 'boolean') config.vision = raw.vision
   return config
 }
 
@@ -163,6 +164,7 @@ function sanitizeCustomEndpoints(raw: unknown): AiCustomEndpoint[] {
       ...(config.connectTimeoutMs !== undefined
         ? { connectTimeoutMs: config.connectTimeoutMs }
         : {}),
+      ...(config.vision !== undefined ? { vision: config.vision } : {}),
     })
   }
   return out

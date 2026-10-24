@@ -8,6 +8,7 @@ export type {
   AiProviderMeta,
   AiSettings,
   CodexModelCatalog,
+  OllamaModelInfo,
   AiAnalysisProviderSelection,
   AiImageProviderSelection,
   AiMediaKeyProviderId,

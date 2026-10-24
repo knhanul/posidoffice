@@ -29,4 +29,5 @@ export const he = {
   localLocked: 'לא ניתן להסיר שרת Ollama שפועל במחשב זה.',
   connectTimeout: 'זמן קצוב לתגובה ראשונה (דקות)',
   connectTimeoutHint: 'הגדילו את הערך עבור שרתים שטוענים מודלים לאט.',
+  visionBadge: 'ראייה',
 } satisfies Record<keyof typeof zh, string>

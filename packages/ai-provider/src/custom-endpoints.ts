@@ -68,6 +68,7 @@ function normalizeEndpoints(raw: unknown): AiCustomEndpoint[] {
       ...(models && models.length > 0 ? { models } : {}),
       ...(effort ? { effort } : {}),
       ...(connectTimeoutMs !== undefined ? { connectTimeoutMs } : {}),
+      ...(typeof e.vision === 'boolean' ? { vision: e.vision } : {}),
     })
   }
   return out
@@ -117,6 +118,7 @@ export function resolveCustomEndpoints(settings: AiSettings): AiSettings {
         baseUrl: active.baseUrl,
         ...(active.effort ? { effort: active.effort } : {}),
         ...(connectTimeoutMs !== undefined ? { connectTimeoutMs } : {}),
+        ...(active.vision !== undefined ? { vision: active.vision } : {}),
       },
     },
   }

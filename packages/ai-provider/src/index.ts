@@ -12,6 +12,7 @@ export type {
   AiSearchProviderMeta,
   AiSearchSettings,
   CodexModelCatalog,
+  OllamaModelInfo,
   AiProviderConfig,
   AiProviderId,
   AiProviderMeta,

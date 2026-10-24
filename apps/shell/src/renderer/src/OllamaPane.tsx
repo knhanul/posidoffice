@@ -1,10 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
-import { newCustomEndpointId, ollamaBaseUrl, prettyModelName } from '@genoffice/ai-provider/browser'
+import {
+  isLocalOllamaUrl,
+  newCustomEndpointId,
+  ollamaBaseUrl,
+  prettyModelName,
+} from '@genoffice/ai-provider/browser'
 import type { AiModelEffort, AiOllamaServer, AiSettings } from '@genoffice/ai-provider/browser'
 import { useI18n } from './locale'
 import { ollamaText, type OllamaStringKey } from './i18n/strings-ollama'
 import { changeAiSettings, readAiSettings } from './settings-ai'
 import {
+  defaultOllamaServer,
+  LOCAL_OLLAMA_URL,
   registerOllamaModel,
   removeOllamaServer,
   saveOllamaServer,
@@ -29,7 +36,7 @@ function ServerForm({
   const { lang, t: common } = useI18n()
   const t = (key: OllamaStringKey) => ollamaText(lang, key)
   const [name, setName] = useState(server?.name ?? '')
-  const [baseUrl, setBaseUrl] = useState(server?.baseUrl ?? 'http://localhost:11434/v1')
+  const [baseUrl, setBaseUrl] = useState(server?.baseUrl ?? LOCAL_OLLAMA_URL)
   const [apiKey, setApiKey] = useState(server?.apiKey ?? '')
   const normalized = ollamaBaseUrl(baseUrl)
   return (
@@ -154,6 +161,7 @@ function ServerCard({
   const current =
     catalog?.baseUrl === server.baseUrl && catalog.apiKey === server.apiKey ? catalog : null
   const status = current?.status ?? 'loading'
+  const locked = status === 'ok' && isLocalOllamaUrl(server.baseUrl)
   const endpoints = (settings.customEndpoints ?? []).filter((e) =>
     server.endpointIds.includes(e.id),
   )
@@ -192,7 +200,12 @@ function ServerCard({
           >
             {common(status === 'loading' ? 'setAiTesting' : 'setAiTest')}
           </button>
-          <button className="set-btn danger" disabled={busy} onClick={() => setConfirmDelete(true)}>
+          <button
+            className="set-btn danger"
+            disabled={busy || locked}
+            title={locked ? t('localLocked') : undefined}
+            onClick={() => setConfirmDelete(true)}
+          >
             {common('delete')}
           </button>
         </div>
@@ -262,29 +275,26 @@ function ServerCard({
                     {pretty !== model && <span className="ollama-model-raw">{model}</span>}
                   </div>
                   <div className="ollama-model-actions">
-                    <div className="ollama-effort-options" role="group" aria-label={t('installed')}>
+                    <div className="ollama-effort-bar" role="group" aria-label={t('installed')}>
                       {EFFORT_LEVELS.map((level) => {
                         const isRegistered = registeredEfforts.has(level)
                         const isChecked = isRegistered || currentSelected.includes(level)
                         return (
-                          <label
+                          <button
                             key={level}
-                            className={`ollama-effort-label${isRegistered ? ' registered' : ''}`}
+                            type="button"
+                            className={`ollama-effort-seg${isChecked ? ' on' : ''}${isRegistered ? ' registered' : ''}`}
+                            disabled={busy || isRegistered}
+                            aria-pressed={isChecked}
+                            title={isRegistered ? t('registeredBadge') : undefined}
+                            onClick={() => toggleEffort(model, level, isRegistered)}
                           >
-                            <input
-                              type="checkbox"
-                              disabled={busy || isRegistered}
-                              checked={isChecked}
-                              onChange={() => toggleEffort(model, level, isRegistered)}
-                            />
-                            <span>
-                              {level === 'low'
-                                ? t('effortLow')
-                                : level === 'medium'
-                                  ? t('effortMedium')
-                                  : t('effortHigh')}
-                            </span>
-                          </label>
+                            {level === 'low'
+                              ? t('effortLow')
+                              : level === 'medium'
+                                ? t('effortMedium')
+                                : t('effortHigh')}
+                          </button>
                         )
                       })}
                     </div>
@@ -384,6 +394,24 @@ export function OllamaPane() {
     }
     return next !== null
   }
+  const restored = useRef(false)
+  useEffect(() => {
+    const list = settings?.ollamaServers
+    if (!list || restored.current) return
+    if (list.some((s) => s.baseUrl === LOCAL_OLLAMA_URL)) return
+    restored.current = true
+    void window.aiOffice.getCustomModels(LOCAL_OLLAMA_URL, '').then(
+      (result) => {
+        if (!alive.current || !(result.reachable || result.models.length > 0)) return
+        void change((latest) => {
+          const current = latest.ollamaServers ?? []
+          if (current.some((s) => s.baseUrl === LOCAL_OLLAMA_URL)) return latest
+          return saveOllamaServer(latest, defaultOllamaServer(t('localServer')))
+        })
+      },
+      () => {},
+    )
+  }, [settings])
   const servers = settings
     ? (withDefaultOllamaServer(settings, t('localServer')).ollamaServers ?? [])
     : []

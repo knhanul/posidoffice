@@ -27,4 +27,5 @@ export const th = {
   effortLow: 'ต่ำ (Low)',
   effortMedium: 'ปานกลาง (Medium)',
   effortHigh: 'สูง (High)',
+  localLocked: 'ไม่สามารถลบเซิร์ฟเวอร์ Ollama ที่กำลังทำงานบนพีซีเครื่องนี้ได้',
 } satisfies Record<keyof typeof zh, string>

@@ -27,4 +27,5 @@ export const ar = {
   effortLow: 'منخفض (Low)',
   effortMedium: 'متوسط (Medium)',
   effortHigh: 'مرتفع (High)',
+  localLocked: 'لا يمكن حذف خادم Ollama الذي يعمل على هذا الكمبيوتر.',
 } satisfies Record<keyof typeof zh, string>

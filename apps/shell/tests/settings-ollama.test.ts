@@ -201,7 +201,11 @@ describe('Ollama settings pane', () => {
       baseUrl: server.baseUrl,
     })
     expect(stored.customEndpoints?.[0]?.name).toBe('Local Ollama / Qwen medium')
-    await click('Delete', host.querySelector('article header')!)
+    const header = host.querySelector('article header')!
+    expect(button('Delete', header).disabled).toBe(true)
+    await click('Test connection')
+    await answer(1, [], false)
+    await click('Delete', header)
     await click('Delete', host.querySelector('.ollama-confirm')!)
     await act(async () => {
       changed?.()
@@ -214,14 +218,15 @@ describe('Ollama settings pane', () => {
   it('adds, edits, registers, removes and reloads a server through the persisted settings API', async () => {
     await render()
     expect(host.textContent).toContain('No servers added yet.')
+    await answer(0, [], false)
     await click('+ Add server')
     await type(0, 'Local')
     await click('Add server')
-    expect(pending).toHaveLength(1)
-    expect(pending[0]!.url).toBe(server.baseUrl)
+    expect(pending).toHaveLength(2)
+    expect(pending[1]!.url).toBe(server.baseUrl)
     expect(stored.ollamaServers).toHaveLength(1)
     expect(stored.customEndpoints).toBeUndefined()
-    await answer(0, ['qwen'])
+    await answer(1, ['qwen'])
     await click('Register')
     expect(button('Registered').disabled).toBe(true)
     expect(stored.provider).toBe('auto')
@@ -231,7 +236,7 @@ describe('Ollama settings pane', () => {
     await type(1, other.baseUrl)
     await type(2, 'secret')
     await click('Save')
-    expect(pending[1]).toMatchObject({ url: other.baseUrl, key: 'secret' })
+    expect(pending[2]).toMatchObject({ url: other.baseUrl, key: 'secret' })
     expect(stored.customEndpoints![0]).toMatchObject({
       name: 'Office / Qwen medium',
       baseUrl: other.baseUrl,
@@ -249,7 +254,7 @@ describe('Ollama settings pane', () => {
     await click('Delete', host.querySelector('article header')!)
     await click('Delete', host.querySelector('.ollama-confirm')!)
     expect(stored.ollamaServers).toEqual([])
-    await answer(1, ['late'])
+    await answer(2, ['late'])
     expect(host.textContent).not.toContain('late')
   })
 
@@ -266,25 +271,53 @@ describe('Ollama settings pane', () => {
     expect(host.textContent).toContain('No models are installed')
     await answer(0, ['old-server-model'])
     expect(host.textContent).not.toContain('old-server-model')
-    await click('Test connection')
     await answer(2, [], false)
+    await click('Test connection')
+    await answer(3, [], false)
     expect(host.textContent).toContain('Could not fetch models.')
     await click('Test connection')
-    await answer(3, ['recovered'])
+    await answer(4, ['recovered'])
     expect(host.textContent).toContain('recovered')
   })
 
   it('keeps failed saves visible and never probes an unsaved server', async () => {
     writes.mockRejectedValueOnce(new Error('disk full'))
     await render()
+    await answer(0, [], false)
     await click('+ Add server')
     await type(0, 'Local')
     await click('Add server')
     expect(host.textContent).toContain('Could not save changes.')
     expect(host.querySelector('form')).not.toBeNull()
-    expect(pending).toHaveLength(0)
+    expect(pending).toHaveLength(1)
     await click('Add server')
     expect(stored.ollamaServers).toHaveLength(1)
-    expect(pending).toHaveLength(1)
+    expect(pending).toHaveLength(2)
+  })
+
+  it('locks deletion of a reachable local server but not of a remote one', async () => {
+    stored = saveOllamaServer(saveOllamaServer(defaultAiSettings(), server), other)
+    await render()
+    await answer(0, ['qwen'])
+    await answer(1, ['remote-model'])
+    const cards = host.querySelectorAll('article')
+    expect(button('Delete', cards[0]!.querySelector('header')!).disabled).toBe(true)
+    await click('Delete', cards[1]!.querySelector('header')!)
+    await click('Delete', cards[1]!.querySelector('.ollama-confirm')!)
+    expect(stored.ollamaServers?.map((s) => s.id)).toEqual(['local'])
+    expect(host.textContent).toContain('Local')
+    expect(host.textContent).not.toContain('LAN')
+  })
+
+  it('restores the local card when a running local Ollama answers', async () => {
+    await render()
+    expect(host.textContent).toContain('No servers added yet.')
+    await answer(0, ['qwen'])
+    expect(stored.ollamaServers).toEqual([
+      expect.objectContaining({ id: 'ollama-local', baseUrl: server.baseUrl }),
+    ])
+    expect(host.textContent).toContain('Local Ollama')
+    await answer(1, ['qwen'])
+    expect(host.textContent).toContain('Qwen')
   })
 })

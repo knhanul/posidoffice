@@ -27,4 +27,5 @@ export const cs = {
   effortLow: 'Nízký (Low)',
   effortMedium: 'Střední (Medium)',
   effortHigh: 'Vysoký (High)',
+  localLocked: 'Server Ollama běžící na tomto počítači nelze odebrat.',
 } satisfies Record<keyof typeof zh, string>

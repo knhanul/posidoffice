@@ -26,4 +26,5 @@ export const zhTW = {
   effortLow: '低 (Low)',
   effortMedium: '中 (Medium)',
   effortHigh: '高 (High)',
+  localLocked: '本機執行中的 Ollama 無法刪除。',
 } satisfies Record<keyof typeof zh, string>

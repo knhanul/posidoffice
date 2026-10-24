@@ -25,4 +25,5 @@ export const zh = {
   effortLow: '低 (Low)',
   effortMedium: '中 (Medium)',
   effortHigh: '高 (High)',
+  localLocked: '本机运行的 Ollama 不能删除。',
 }

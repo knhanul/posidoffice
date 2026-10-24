@@ -27,4 +27,5 @@ export const vi = {
   effortLow: 'Thấp (Low)',
   effortMedium: 'Trung bình (Medium)',
   effortHigh: 'Cao (High)',
+  localLocked: 'Không thể xóa máy chủ Ollama đang chạy trên PC này.',
 } satisfies Record<keyof typeof zh, string>

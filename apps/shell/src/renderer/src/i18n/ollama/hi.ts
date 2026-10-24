@@ -27,4 +27,5 @@ export const hi = {
   effortLow: 'कम (Low)',
   effortMedium: 'मध्यम (Medium)',
   effortHigh: 'उच्च (High)',
+  localLocked: 'इस PC पर चल रहे Ollama सर्वर को हटाया नहीं जा सकता.',
 } satisfies Record<keyof typeof zh, string>

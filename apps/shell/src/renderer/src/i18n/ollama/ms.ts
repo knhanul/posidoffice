@@ -27,4 +27,5 @@ export const ms = {
   effortLow: 'Rendah (Low)',
   effortMedium: 'Sederhana (Medium)',
   effortHigh: 'Tinggi (High)',
+  localLocked: 'Pelayan Ollama yang berjalan pada PC ini tidak boleh dipadamkan.',
 } satisfies Record<keyof typeof zh, string>

@@ -29,4 +29,5 @@ export const ja = {
   effortLow: '低 (Low)',
   effortMedium: '中 (Medium)',
   effortHigh: '高 (High)',
+  localLocked: 'この PC で実行中の Ollama は削除できません。',
 } satisfies Record<keyof typeof zh, string>

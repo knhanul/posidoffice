@@ -28,4 +28,5 @@ export const de = {
   effortLow: 'Niedrig (Low)',
   effortMedium: 'Mittel (Medium)',
   effortHigh: 'Hoch (High)',
+  localLocked: 'Ein auf diesem PC laufender Ollama-Server kann nicht entfernt werden.',
 } satisfies Record<keyof typeof zh, string>

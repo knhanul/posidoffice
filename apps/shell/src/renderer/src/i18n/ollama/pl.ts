@@ -27,4 +27,5 @@ export const pl = {
   effortLow: 'Niski (Low)',
   effortMedium: 'Średni (Medium)',
   effortHigh: 'Wysoki (High)',
+  localLocked: 'Serwera Ollama uruchomionego na tym komputerze nie można usunąć.',
 } satisfies Record<keyof typeof zh, string>

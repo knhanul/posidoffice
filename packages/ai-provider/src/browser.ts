@@ -25,7 +25,7 @@ export type {
   AiUsageWindow,
   AiVideoAnalysisProviderSelection,
 } from './types'
-export { ollamaBaseUrl } from './ollama-servers'
+export { isLocalOllamaUrl, ollamaBaseUrl } from './ollama-servers'
 export {
   AI_SUBSCRIPTION_PROVIDERS,
   isKeyProviderConfigured,

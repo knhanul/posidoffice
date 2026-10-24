@@ -27,4 +27,5 @@ export const ko = {
   effortLow: '낮음 (Low)',
   effortMedium: '보통 (Medium)',
   effortHigh: '높음 (High)',
+  localLocked: '이 PC에서 실행 중인 Ollama는 삭제할 수 없습니다.',
 } satisfies Record<keyof typeof zh, string>

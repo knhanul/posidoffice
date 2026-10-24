@@ -27,4 +27,5 @@ export const en = {
   effortLow: 'Low',
   effortMedium: 'Medium',
   effortHigh: 'High',
+  localLocked: 'An Ollama server running on this PC cannot be removed.',
 } satisfies Record<keyof typeof zh, string>

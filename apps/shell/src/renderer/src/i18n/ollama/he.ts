@@ -26,4 +26,5 @@ export const he = {
   effortLow: 'נמוך (Low)',
   effortMedium: 'בינו니 (Medium)',
   effortHigh: 'גבוה (High)',
+  localLocked: 'לא ניתן להסיר שרת Ollama שפועל במחשב זה.',
 } satisfies Record<keyof typeof zh, string>

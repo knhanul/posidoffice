@@ -27,4 +27,5 @@ export const id = {
   effortLow: 'Rendah (Low)',
   effortMedium: 'Sedang (Medium)',
   effortHigh: 'Tinggi (High)',
+  localLocked: 'Server Ollama yang berjalan di PC ini tidak dapat dihapus.',
 } satisfies Record<keyof typeof zh, string>

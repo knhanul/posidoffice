@@ -16,6 +16,24 @@ export function ollamaBaseUrl(value: string): string | undefined {
   }
 }
 
+/** Loopback hosts a locally running Ollama listens on. */
+export function isLocalOllamaUrl(value: string): boolean {
+  try {
+    const host = new URL(value).hostname.toLowerCase()
+    return (
+      host === 'localhost' ||
+      host.endsWith('.localhost') ||
+      host.startsWith('127.') ||
+      host === '0.0.0.0' ||
+      host === '::1' ||
+      host === '[::1]' ||
+      host === '[::]'
+    )
+  } catch {
+    return false
+  }
+}
+
 export function normalizeOllamaServers(raw: unknown): AiOllamaServer[] {
   if (!Array.isArray(raw)) return []
   const servers: AiOllamaServer[] = []

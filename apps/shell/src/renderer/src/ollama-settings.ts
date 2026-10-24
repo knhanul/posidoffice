@@ -8,20 +8,24 @@ import {
 } from '@genoffice/ai-provider/browser'
 import type { AiModelEffort, AiOllamaServer, AiSettings } from '@genoffice/ai-provider/browser'
 
+export const LOCAL_OLLAMA_URL = 'http://localhost:11434/v1'
+
+export function defaultOllamaServer(name: string): AiOllamaServer {
+  return {
+    id: 'ollama-local',
+    name,
+    baseUrl: LOCAL_OLLAMA_URL,
+    apiKey: '',
+    endpointIds: [],
+  }
+}
+
 /** An absent list is a first visit; an empty list means the user removed all servers. */
 export function withDefaultOllamaServer(settings: AiSettings, name: string): AiSettings {
   if (settings.ollamaServers !== undefined) return settings
   return {
     ...settings,
-    ollamaServers: [
-      {
-        id: 'ollama-local',
-        name,
-        baseUrl: 'http://localhost:11434/v1',
-        apiKey: '',
-        endpointIds: [],
-      },
-    ],
+    ollamaServers: [defaultOllamaServer(name)],
   }
 }
 

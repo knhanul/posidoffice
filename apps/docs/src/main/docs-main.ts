@@ -56,7 +56,7 @@ import {
   showOpenDialogWithMemory,
   showSaveDialogWithMemory,
   aboutMenuItem,
-  checkUpdatesMenuItem,
+  helpCheckUpdatesItems,
   toggleDevToolsItem,
   windowMenuTemplate,
   type HeadlessExportFormat,
@@ -69,6 +69,10 @@ import {
   readBodyCapped,
   writeJsonAtomic,
   assertFileSaved,
+  createRecoveryStore,
+  registerRecoveryEditor,
+  type RecoveryEditorContract,
+  type RecoveryIdentity,
 } from '@genoffice/electron-utils'
 import {
   configureExtraFontDirs,
@@ -78,6 +82,7 @@ import {
 } from '@genoffice/font-metrics'
 import { createI18n, getUiLang, normalizeLang, PRODUCT_NAME, setUiLang } from '@genoffice/i18n'
 import { ProjectStore } from '@genoffice/project-store'
+import { aiSubscriptionLoginWindowText } from '@genoffice/ui/ai-subscription-login-window'
 import type {
   IpcMainInvokeEvent,
   MenuItemConstructorOptions,
@@ -115,6 +120,7 @@ import {
   type AiStreamChunk,
   type AiStreamRequest,
   type AiSubscriptionProviderId,
+  sealAiSecrets,
 } from '@genoffice/ai-provider'
 import { listCodexModels, shutdownCodexAppServers } from '@genoffice/ai-provider/codex-app-server'
 import {
@@ -152,11 +158,13 @@ import type {
   CreateDocumentResult,
   DecryptOpenResult,
   DocsTabInfo,
+  MarkdownImage,
   MenuCommand,
   OpenDocxResult,
   OpenFileResult,
   SpellLanguages,
 } from '../shared/ipc'
+import { MARKDOWN_MEDIA_DIR_TOKEN } from '../shared/ipc'
 import { ClickClaims } from '../shared/context-menu-claims'
 import { findDocxPath } from '../shared/open-file'
 import {
@@ -168,7 +176,8 @@ import {
   type AiRunTexts,
 } from './ai-run'
 import { createChunkCoalescer } from './stream-coalesce'
-import { atomicWriteFile, looksLikeZip } from './atomic-write'
+import { atomicWriteFile } from './atomic-write'
+import { createDocsRecovery } from './docs-recovery'
 import {
   adoptLazyMediaHashes,
   forgetLazyMediaOwner,
@@ -201,14 +210,15 @@ import {
 import { isExternallyModified, type DiskFileState } from './external-change'
 import {
   docFormatOfPath,
-  isOdtPackage,
+  prepareRecoveryBytes,
   prepareSaveBytes,
   recoveryExtFor,
   withDocExtension,
   type DocFormat,
 } from './doc-format'
 import { copyImageDisplaySize, validCopyImageDataUrl } from './copy-image-guard'
-import { printScaleOption, validPrintGeometry } from './print-args'
+import { printJobOptions, printScaleOption, validPrintGeometry } from './print-args'
+import { addPdfInternalLinks } from './pdf-links'
 import {
   assignStarredGroup,
   dropStarredItems,
@@ -244,10 +254,6 @@ const tMain = createI18n({
     closeNoReplyMsg: '文档没有响应,可能有未保存的更改。',
     closeNoReplyDetail: '仍要关闭吗?未保存的更改将丢失。',
     btnCloseAnyway: '仍要关闭',
-    autosaveFoundTitle: '发现自动恢复版本',
-    autosaveFoundBody: '上次会话有未保存的更改。要恢复自动保存的版本吗?',
-    autosaveRestore: '恢复',
-    autosaveDiscard: '放弃',
     btnDontSave: '不保存',
     btnCancel: '取消',
     extModifiedMsg: '文件已被其他程序修改。',
@@ -260,6 +266,7 @@ const tMain = createI18n({
     filterAll: '所有文件',
     dlgExportPdf: '导出为 PDF',
     dlgExportHtml: '导出为 HTML',
+    dlgExportMarkdown: '导出为 Markdown',
     dlgPickExportDir: '选择导出目录',
     errUnsupportedExt: '暂不支持 .{ext} 类型',
     errNotFile: '不是文件',
@@ -285,6 +292,7 @@ const tMain = createI18n({
     menuPageSetup: '页面设置…',
     menuExportPdf: '导出为 PDF…',
     menuExportHtml: '导出为 HTML…',
+    menuExportMarkdown: '导出为 Markdown…',
     menuExportImages: '导出为图片…',
     menuPrint: '打印…',
     menuEdit: '编辑',
@@ -374,11 +382,6 @@ const tMain = createI18n({
     closeNoReplyMsg: 'The document is not responding and may have unsaved changes.',
     closeNoReplyDetail: 'Close anyway? Unsaved changes will be lost.',
     btnCloseAnyway: 'Close Anyway',
-    autosaveFoundTitle: 'Recovered version found',
-    autosaveFoundBody:
-      'There are unsaved changes from your last session. Restore the autosaved version?',
-    autosaveRestore: 'Restore',
-    autosaveDiscard: 'Discard',
     btnDontSave: "Don't Save",
     btnCancel: 'Cancel',
     extModifiedMsg: 'The file has been modified by another program.',
@@ -391,6 +394,7 @@ const tMain = createI18n({
     filterAll: 'All Files',
     dlgExportPdf: 'Export as PDF',
     dlgExportHtml: 'Export as HTML',
+    dlgExportMarkdown: 'Export as Markdown',
     dlgPickExportDir: 'Choose Export Folder',
     errUnsupportedExt: '.{ext} files are not supported',
     errNotFile: 'not a file',
@@ -416,6 +420,7 @@ const tMain = createI18n({
     menuPageSetup: 'Page Setup…',
     menuExportPdf: 'Export as PDF…',
     menuExportHtml: 'Export as HTML…',
+    menuExportMarkdown: 'Export as Markdown…',
     menuExportImages: 'Export as Images…',
     menuPrint: 'Print…',
     menuEdit: 'Edit',
@@ -505,11 +510,6 @@ const tMain = createI18n({
     closeNoReplyMsg: 'Tài liệu không phản hồi và có thể có những thay đổi chưa được lưu.',
     closeNoReplyDetail: 'Vẫn đóng? Các thay đổi chưa lưu sẽ bị mất.',
     btnCloseAnyway: 'Vẫn đóng',
-    autosaveFoundTitle: 'Tìm thấy phiên bản khôi phục',
-    autosaveFoundBody:
-      'Có những thay đổi chưa được lưu từ phiên làm việc trước của bạn. Khôi phục phiên bản đã lưu tự động?',
-    autosaveRestore: 'Khôi phục',
-    autosaveDiscard: 'Bỏ qua',
     btnDontSave: 'Không lưu',
     btnCancel: 'Hủy',
     extModifiedMsg: 'Tệp đã được sửa đổi bởi một chương trình khác.',
@@ -522,6 +522,7 @@ const tMain = createI18n({
     filterAll: 'Tất cả các tệp',
     dlgExportPdf: 'Xuất dưới dạng PDF',
     dlgExportHtml: 'Xuất dưới dạng HTML',
+    dlgExportMarkdown: 'Xuất dưới dạng Markdown',
     dlgPickExportDir: 'Chọn thư mục xuất',
     errUnsupportedExt: 'Tệp .{ext} không được hỗ trợ',
     errNotFile: 'không phải là tệp',
@@ -548,6 +549,7 @@ const tMain = createI18n({
     menuPageSetup: 'Thiết lập trang…',
     menuExportPdf: 'Xuất dưới dạng PDF…',
     menuExportHtml: 'Xuất dưới dạng HTML…',
+    menuExportMarkdown: 'Xuất dưới dạng Markdown…',
     menuExportImages: 'Xuất dưới dạng hình ảnh…',
     menuPrint: 'In…',
     menuEdit: 'Chỉnh sửa',
@@ -637,10 +639,6 @@ const tMain = createI18n({
     closeNoReplyMsg: 'ドキュメントが応答していません。未保存の変更がある可能性があります。',
     closeNoReplyDetail: 'それでも閉じますか?未保存の変更は失われます。',
     btnCloseAnyway: '閉じる',
-    autosaveFoundTitle: '自動回復バージョンがあります',
-    autosaveFoundBody: '前回のセッションに未保存の変更があります。自動保存版を復元しますか?',
-    autosaveRestore: '復元',
-    autosaveDiscard: '破棄',
     btnDontSave: '保存しない',
     btnCancel: 'キャンセル',
     extModifiedMsg: 'このファイルは別のプログラムによって変更されています。',
@@ -653,6 +651,7 @@ const tMain = createI18n({
     filterAll: 'すべてのファイル',
     dlgExportPdf: 'PDF としてエクスポート',
     dlgExportHtml: 'HTML としてエクスポート',
+    dlgExportMarkdown: 'Markdown としてエクスポート',
     dlgPickExportDir: 'エクスポート先フォルダーの選択',
     errUnsupportedExt: '.{ext} 形式には対応していません',
     errNotFile: 'ファイルではありません',
@@ -679,6 +678,7 @@ const tMain = createI18n({
     menuPageSetup: 'ページ設定…',
     menuExportPdf: 'PDF としてエクスポート…',
     menuExportHtml: 'HTML としてエクスポート…',
+    menuExportMarkdown: 'Markdown としてエクスポート…',
     menuExportImages: '画像としてエクスポート…',
     menuPrint: '印刷…',
     menuEdit: '編集',
@@ -768,11 +768,6 @@ const tMain = createI18n({
     closeNoReplyMsg: '문서가 응답하지 않으며 저장하지 않은 변경 사항이 있을 수 있습니다.',
     closeNoReplyDetail: '그래도 닫을까요? 저장하지 않은 변경 사항은 사라집니다.',
     btnCloseAnyway: '닫기',
-    autosaveFoundTitle: '자동 복구 버전 발견',
-    autosaveFoundBody:
-      '마지막 세션에 저장되지 않은 변경 내용이 있습니다. 자동 저장 버전을 복원할까요?',
-    autosaveRestore: '복원',
-    autosaveDiscard: '취소',
     btnDontSave: '저장 안 함',
     btnCancel: '취소',
     extModifiedMsg: '이 파일이 다른 프로그램에서 수정되었습니다.',
@@ -785,6 +780,7 @@ const tMain = createI18n({
     filterAll: '모든 파일',
     dlgExportPdf: 'PDF로 내보내기',
     dlgExportHtml: 'HTML로 내보내기',
+    dlgExportMarkdown: 'Markdown로 내보내기',
     dlgPickExportDir: '내보낼 폴더 선택',
     errUnsupportedExt: '.{ext} 형식은 지원되지 않습니다',
     errNotFile: '파일이 아닙니다',
@@ -811,6 +807,7 @@ const tMain = createI18n({
     menuPageSetup: '페이지 설정…',
     menuExportPdf: 'PDF로 내보내기…',
     menuExportHtml: 'HTML로 내보내기…',
+    menuExportMarkdown: 'Markdown로 내보내기…',
     menuExportImages: '이미지로 내보내기…',
     menuPrint: '인쇄…',
     menuEdit: '편집',
@@ -901,11 +898,6 @@ const tMain = createI18n({
       'Le document ne répond pas et peut contenir des modifications non enregistrées.',
     closeNoReplyDetail: 'Fermer quand même ? Les modifications non enregistrées seront perdues.',
     btnCloseAnyway: 'Fermer quand même',
-    autosaveFoundTitle: 'Version récupérée trouvée',
-    autosaveFoundBody:
-      'Des modifications non enregistrées existent. Restaurer la version auto-enregistrée ?',
-    autosaveRestore: 'Restaurer',
-    autosaveDiscard: 'Ignorer',
     btnDontSave: 'Ne pas enregistrer',
     btnCancel: 'Annuler',
     extModifiedMsg: 'Le fichier a été modifié par un autre programme.',
@@ -918,6 +910,7 @@ const tMain = createI18n({
     filterAll: 'Tous les fichiers',
     dlgExportPdf: 'Exporter au format PDF',
     dlgExportHtml: 'Exporter au format HTML',
+    dlgExportMarkdown: 'Exporter au format Markdown',
     dlgPickExportDir: "Choisir le dossier d'exportation",
     errUnsupportedExt: 'les fichiers .{ext} ne sont pas pris en charge',
     errNotFile: "n'est pas un fichier",
@@ -944,6 +937,7 @@ const tMain = createI18n({
     menuPageSetup: 'Mise en page…',
     menuExportPdf: 'Exporter au format PDF…',
     menuExportHtml: 'Exporter au format HTML…',
+    menuExportMarkdown: 'Exporter au format Markdown…',
     menuExportImages: 'Exporter en images…',
     menuPrint: 'Imprimer…',
     menuEdit: 'Édition',
@@ -1034,11 +1028,6 @@ const tMain = createI18n({
       'Das Dokument reagiert nicht und enthält möglicherweise ungespeicherte Änderungen.',
     closeNoReplyDetail: 'Trotzdem schließen? Ungespeicherte Änderungen gehen verloren.',
     btnCloseAnyway: 'Trotzdem schließen',
-    autosaveFoundTitle: 'Wiederhergestellte Version gefunden',
-    autosaveFoundBody:
-      'Es gibt ungespeicherte Änderungen. Automatisch gespeicherte Version wiederherstellen?',
-    autosaveRestore: 'Wiederherstellen',
-    autosaveDiscard: 'Verwerfen',
     btnDontSave: 'Nicht speichern',
     btnCancel: 'Abbrechen',
     extModifiedMsg: 'Die Datei wurde von einem anderen Programm geändert.',
@@ -1051,6 +1040,7 @@ const tMain = createI18n({
     filterAll: 'Alle Dateien',
     dlgExportPdf: 'Als PDF exportieren',
     dlgExportHtml: 'Als HTML exportieren',
+    dlgExportMarkdown: 'Als Markdown exportieren',
     dlgPickExportDir: 'Exportordner auswählen',
     errUnsupportedExt: '.{ext}-Dateien werden nicht unterstützt',
     errNotFile: 'keine Datei',
@@ -1077,6 +1067,7 @@ const tMain = createI18n({
     menuPageSetup: 'Seite einrichten…',
     menuExportPdf: 'Als PDF exportieren…',
     menuExportHtml: 'Als HTML exportieren…',
+    menuExportMarkdown: 'Als Markdown exportieren…',
     menuExportImages: 'Als Bilder exportieren…',
     menuPrint: 'Drucken…',
     menuEdit: 'Bearbeiten',
@@ -1166,11 +1157,6 @@ const tMain = createI18n({
     closeNoReplyMsg: 'El documento no responde y puede tener cambios sin guardar.',
     closeNoReplyDetail: '¿Cerrar de todos modos? Los cambios sin guardar se perderán.',
     btnCloseAnyway: 'Cerrar de todos modos',
-    autosaveFoundTitle: 'Se encontró una versión recuperada',
-    autosaveFoundBody:
-      'Hay cambios sin guardar de la última sesión. ¿Restaurar la versión autoguardada?',
-    autosaveRestore: 'Restaurar',
-    autosaveDiscard: 'Descartar',
     btnDontSave: 'No guardar',
     btnCancel: 'Cancelar',
     extModifiedMsg: 'El archivo ha sido modificado por otro programa.',
@@ -1183,6 +1169,7 @@ const tMain = createI18n({
     filterAll: 'Todos los archivos',
     dlgExportPdf: 'Exportar como PDF',
     dlgExportHtml: 'Exportar como HTML',
+    dlgExportMarkdown: 'Exportar como Markdown',
     dlgPickExportDir: 'Elegir carpeta de exportación',
     errUnsupportedExt: 'los archivos .{ext} no son compatibles',
     errNotFile: 'no es un archivo',
@@ -1210,6 +1197,7 @@ const tMain = createI18n({
     menuPageSetup: 'Configurar página…',
     menuExportPdf: 'Exportar como PDF…',
     menuExportHtml: 'Exportar como HTML…',
+    menuExportMarkdown: 'Exportar como Markdown…',
     menuExportImages: 'Exportar como imágenes…',
     menuPrint: 'Imprimir…',
     menuEdit: 'Edición',
@@ -1299,10 +1287,6 @@ const tMain = createI18n({
     closeNoReplyMsg: 'เอกสารไม่ตอบสนองและอาจมีการเปลี่ยนแปลงที่ยังไม่ได้บันทึก',
     closeNoReplyDetail: 'ปิดต่อไปหรือไม่ การเปลี่ยนแปลงที่ยังไม่ได้บันทึกจะหายไป',
     btnCloseAnyway: 'ปิดต่อไป',
-    autosaveFoundTitle: 'พบเวอร์ชันกู้คืนอัตโนมัติ',
-    autosaveFoundBody: 'มีการเปลี่ยนแปลงที่ยังไม่ได้บันทึกจากครั้งก่อน ต้องการกู้คืนหรือไม่?',
-    autosaveRestore: 'กู้คืน',
-    autosaveDiscard: 'ละทิ้ง',
     btnDontSave: 'ไม่บันทึก',
     btnCancel: 'ยกเลิก',
     extModifiedMsg: 'ไฟล์ถูกแก้ไขโดยโปรแกรมอื่น',
@@ -1315,6 +1299,7 @@ const tMain = createI18n({
     filterAll: 'ไฟล์ทั้งหมด',
     dlgExportPdf: 'ส่งออกเป็น PDF',
     dlgExportHtml: 'ส่งออกเป็น HTML',
+    dlgExportMarkdown: 'ส่งออกเป็น Markdown',
     dlgPickExportDir: 'เลือกโฟลเดอร์ส่งออก',
     errUnsupportedExt: 'ไม่รองรับไฟล์ .{ext}',
     errNotFile: 'ไม่ใช่ไฟล์',
@@ -1341,6 +1326,7 @@ const tMain = createI18n({
     menuPageSetup: 'ตั้งค่าหน้ากระดาษ…',
     menuExportPdf: 'ส่งออกเป็น PDF…',
     menuExportHtml: 'ส่งออกเป็น HTML…',
+    menuExportMarkdown: 'ส่งออกเป็น Markdown…',
     menuExportImages: 'ส่งออกเป็นรูปภาพ…',
     menuPrint: 'พิมพ์…',
     menuEdit: 'แก้ไข',
@@ -1430,11 +1416,6 @@ const tMain = createI18n({
     closeNoReplyMsg: 'Dokumen tidak merespons dan mungkin memiliki perubahan yang belum disimpan.',
     closeNoReplyDetail: 'Tetap tutup? Perubahan yang belum disimpan akan hilang.',
     btnCloseAnyway: 'Tetap Tutup',
-    autosaveFoundTitle: 'Versi pemulihan ditemukan',
-    autosaveFoundBody:
-      'Ada perubahan yang belum disimpan dari sesi terakhir. Pulihkan versi tersimpan otomatis?',
-    autosaveRestore: 'Pulihkan',
-    autosaveDiscard: 'Buang',
     btnDontSave: 'Jangan Simpan',
     btnCancel: 'Batal',
     extModifiedMsg: 'File telah diubah oleh program lain.',
@@ -1447,6 +1428,7 @@ const tMain = createI18n({
     filterAll: 'Semua File',
     dlgExportPdf: 'Ekspor sebagai PDF',
     dlgExportHtml: 'Ekspor sebagai HTML',
+    dlgExportMarkdown: 'Ekspor sebagai Markdown',
     dlgPickExportDir: 'Pilih Folder Ekspor',
     errUnsupportedExt: 'file .{ext} tidak didukung',
     errNotFile: 'bukan file',
@@ -1473,6 +1455,7 @@ const tMain = createI18n({
     menuPageSetup: 'Penyetelan Halaman…',
     menuExportPdf: 'Ekspor sebagai PDF…',
     menuExportHtml: 'Ekspor sebagai HTML…',
+    menuExportMarkdown: 'Ekspor sebagai Markdown…',
     menuExportImages: 'Ekspor sebagai gambar…',
     menuPrint: 'Cetak…',
     menuEdit: 'Edit',
@@ -1562,11 +1545,6 @@ const tMain = createI18n({
     closeNoReplyMsg: 'Документ не отвечает; возможно, есть несохранённые изменения.',
     closeNoReplyDetail: 'Всё равно закрыть? Несохранённые изменения будут потеряны.',
     btnCloseAnyway: 'Закрыть всё равно',
-    autosaveFoundTitle: 'Найдена восстановленная версия',
-    autosaveFoundBody:
-      'Есть несохранённые изменения из прошлого сеанса. Восстановить автосохранённую версию?',
-    autosaveRestore: 'Восстановить',
-    autosaveDiscard: 'Отклонить',
     btnDontSave: 'Не сохранять',
     btnCancel: 'Отмена',
     extModifiedMsg: 'Файл был изменён другой программой.',
@@ -1579,6 +1557,7 @@ const tMain = createI18n({
     filterAll: 'Все файлы',
     dlgExportPdf: 'Экспорт в PDF',
     dlgExportHtml: 'Экспорт в HTML',
+    dlgExportMarkdown: 'Экспорт в Markdown',
     dlgPickExportDir: 'Выбор папки для экспорта',
     errUnsupportedExt: 'файлы .{ext} не поддерживаются',
     errNotFile: 'не является файлом',
@@ -1605,6 +1584,7 @@ const tMain = createI18n({
     menuPageSetup: 'Параметры страницы…',
     menuExportPdf: 'Экспорт в PDF…',
     menuExportHtml: 'Экспорт в HTML…',
+    menuExportMarkdown: 'Экспорт в Markdown…',
     menuExportImages: 'Экспорт в изображения…',
     menuPrint: 'Печать…',
     menuEdit: 'Правка',
@@ -1694,11 +1674,6 @@ const tMain = createI18n({
     closeNoReplyMsg: 'المستند لا يستجيب وقد يحتوي على تغييرات غير محفوظة.',
     closeNoReplyDetail: 'هل تريد الإغلاق رغم ذلك؟ ستفقد التغييرات غير المحفوظة.',
     btnCloseAnyway: 'إغلاق على أي حال',
-    autosaveFoundTitle: 'تم العثور على نسخة مستردة',
-    autosaveFoundBody:
-      'توجد تغييرات غير محفوظة من الجلسة الأخيرة. هل تريد استعادة النسخة المحفوظة تلقائيًا؟',
-    autosaveRestore: 'استعادة',
-    autosaveDiscard: 'تجاهل',
     btnDontSave: 'عدم الحفظ',
     btnCancel: 'إلغاء',
     extModifiedMsg: 'تم تعديل الملف بواسطة برنامج آخر.',
@@ -1711,6 +1686,7 @@ const tMain = createI18n({
     filterAll: 'كل الملفات',
     dlgExportPdf: 'تصدير بتنسيق PDF',
     dlgExportHtml: 'تصدير بتنسيق HTML',
+    dlgExportMarkdown: 'تصدير بتنسيق Markdown',
     dlgPickExportDir: 'اختيار مجلد التصدير',
     errUnsupportedExt: 'ملفات .{ext} غير مدعومة',
     errNotFile: 'ليس ملفًا',
@@ -1737,6 +1713,7 @@ const tMain = createI18n({
     menuPageSetup: 'إعداد الصفحة…',
     menuExportPdf: 'تصدير بتنسيق PDF…',
     menuExportHtml: 'تصدير بتنسيق HTML…',
+    menuExportMarkdown: 'تصدير بتنسيق Markdown…',
     menuExportImages: 'تصدير كصور…',
     menuPrint: 'طباعة…',
     menuEdit: 'تحرير',
@@ -1826,11 +1803,6 @@ const tMain = createI18n({
     closeNoReplyMsg: 'O documento não está respondendo e pode ter alterações não salvas.',
     closeNoReplyDetail: 'Fechar mesmo assim? As alterações não salvas serão perdidas.',
     btnCloseAnyway: 'Fechar mesmo assim',
-    autosaveFoundTitle: 'Versão recuperada encontrada',
-    autosaveFoundBody:
-      'Há alterações não salvas da sua última sessão. Restaurar a versão salva automaticamente?',
-    autosaveRestore: 'Restaurar',
-    autosaveDiscard: 'Descartar',
     btnDontSave: 'Não Salvar',
     btnCancel: 'Cancelar',
     extModifiedMsg: 'O arquivo foi modificado por outro programa.',
@@ -1843,6 +1815,7 @@ const tMain = createI18n({
     filterAll: 'Todos os Arquivos',
     dlgExportPdf: 'Exportar como PDF',
     dlgExportHtml: 'Exportar como HTML',
+    dlgExportMarkdown: 'Exportar como Markdown',
     dlgPickExportDir: 'Escolher Pasta de Exportação',
     errUnsupportedExt: 'arquivos .{ext} não são suportados',
     errNotFile: 'não é um arquivo',
@@ -1869,6 +1842,7 @@ const tMain = createI18n({
     menuPageSetup: 'Configurar Página…',
     menuExportPdf: 'Exportar como PDF…',
     menuExportHtml: 'Exportar como HTML…',
+    menuExportMarkdown: 'Exportar como Markdown…',
     menuExportImages: 'Exportar como imagens…',
     menuPrint: 'Imprimir…',
     menuEdit: 'Editar',
@@ -1958,11 +1932,6 @@ const tMain = createI18n({
     closeNoReplyMsg: 'Il documento non risponde e potrebbe avere modifiche non salvate.',
     closeNoReplyDetail: 'Chiudere comunque? Le modifiche non salvate andranno perse.',
     btnCloseAnyway: 'Chiudi comunque',
-    autosaveFoundTitle: 'Trovata versione recuperata',
-    autosaveFoundBody:
-      "Ci sono modifiche non salvate dall'ultima sessione. Ripristinare la versione salvata automaticamente?",
-    autosaveRestore: 'Ripristina',
-    autosaveDiscard: 'Ignora',
     btnDontSave: 'Non salvare',
     btnCancel: 'Annulla',
     extModifiedMsg: 'Il file è stato modificato da un altro programma.',
@@ -1975,6 +1944,7 @@ const tMain = createI18n({
     filterAll: 'Tutti i file',
     dlgExportPdf: 'Esporta come PDF',
     dlgExportHtml: 'Esporta come HTML',
+    dlgExportMarkdown: 'Esporta come Markdown',
     dlgPickExportDir: 'Scegli la cartella di esportazione',
     errUnsupportedExt: 'i file .{ext} non sono supportati',
     errNotFile: 'non è un file',
@@ -2001,6 +1971,7 @@ const tMain = createI18n({
     menuPageSetup: 'Imposta pagina…',
     menuExportPdf: 'Esporta come PDF…',
     menuExportHtml: 'Esporta come HTML…',
+    menuExportMarkdown: 'Esporta come Markdown…',
     menuExportImages: 'Esporta come immagini…',
     menuPrint: 'Stampa…',
     menuEdit: 'Modifica',
@@ -2090,11 +2061,6 @@ const tMain = createI18n({
     closeNoReplyMsg: 'Dokument nie odpowiada i może zawierać niezapisane zmiany.',
     closeNoReplyDetail: 'Zamknąć mimo to? Niezapisane zmiany zostaną utracone.',
     btnCloseAnyway: 'Zamknij mimo to',
-    autosaveFoundTitle: 'Znaleziono odzyskaną wersję',
-    autosaveFoundBody:
-      'Istnieją niezapisane zmiany z ostatniej sesji. Przywrócić wersję zapisaną automatycznie?',
-    autosaveRestore: 'Przywróć',
-    autosaveDiscard: 'Odrzuć',
     btnDontSave: 'Nie zapisuj',
     btnCancel: 'Anuluj',
     extModifiedMsg: 'Plik został zmodyfikowany przez inny program.',
@@ -2107,6 +2073,7 @@ const tMain = createI18n({
     filterAll: 'Wszystkie pliki',
     dlgExportPdf: 'Eksportuj jako PDF',
     dlgExportHtml: 'Eksportuj jako HTML',
+    dlgExportMarkdown: 'Eksportuj jako Markdown',
     dlgPickExportDir: 'Wybierz folder eksportu',
     errUnsupportedExt: 'pliki .{ext} nie są obsługiwane',
     errNotFile: 'to nie jest plik',
@@ -2133,6 +2100,7 @@ const tMain = createI18n({
     menuPageSetup: 'Ustawienia strony…',
     menuExportPdf: 'Eksportuj jako PDF…',
     menuExportHtml: 'Eksportuj jako HTML…',
+    menuExportMarkdown: 'Eksportuj jako Markdown…',
     menuExportImages: 'Eksportuj jako obrazy…',
     menuPrint: 'Drukuj…',
     menuEdit: 'Edycja',
@@ -2222,11 +2190,6 @@ const tMain = createI18n({
     closeNoReplyMsg: 'Dokument neodpovídá a může obsahovat neuložené změny.',
     closeNoReplyDetail: 'Přesto zavřít? Neuložené změny budou ztraceny.',
     btnCloseAnyway: 'Přesto zavřít',
-    autosaveFoundTitle: 'Nalezena obnovená verze',
-    autosaveFoundBody:
-      'Z poslední relace existují neuložené změny. Obnovit automaticky uloženou verzi?',
-    autosaveRestore: 'Obnovit',
-    autosaveDiscard: 'Zahodit',
     btnDontSave: 'Neukládat',
     btnCancel: 'Zrušit',
     extModifiedMsg: 'Soubor byl změněn jiným programem.',
@@ -2239,6 +2202,7 @@ const tMain = createI18n({
     filterAll: 'Všechny soubory',
     dlgExportPdf: 'Exportovat jako PDF',
     dlgExportHtml: 'Exportovat jako HTML',
+    dlgExportMarkdown: 'Exportovat jako Markdown',
     dlgPickExportDir: 'Zvolte složku pro export',
     errUnsupportedExt: 'soubory .{ext} nejsou podporovány',
     errNotFile: 'není soubor',
@@ -2265,6 +2229,7 @@ const tMain = createI18n({
     menuPageSetup: 'Vzhled stránky…',
     menuExportPdf: 'Exportovat jako PDF…',
     menuExportHtml: 'Exportovat jako HTML…',
+    menuExportMarkdown: 'Exportovat jako Markdown…',
     menuExportImages: 'Exportovat jako obrázky…',
     menuPrint: 'Tisk…',
     menuEdit: 'Úpravy',
@@ -2354,11 +2319,6 @@ const tMain = createI18n({
     closeNoReplyMsg: 'Het document reageert niet en heeft mogelijk niet-opgeslagen wijzigingen.',
     closeNoReplyDetail: 'Toch sluiten? Niet-opgeslagen wijzigingen gaan verloren.',
     btnCloseAnyway: 'Toch sluiten',
-    autosaveFoundTitle: 'Herstelde versie gevonden',
-    autosaveFoundBody:
-      'Er zijn niet-opgeslagen wijzigingen van uw laatste sessie. De automatisch opgeslagen versie herstellen?',
-    autosaveRestore: 'Herstellen',
-    autosaveDiscard: 'Negeren',
     btnDontSave: 'Niet opslaan',
     btnCancel: 'Annuleren',
     extModifiedMsg: 'Het bestand is door een ander programma gewijzigd.',
@@ -2371,6 +2331,7 @@ const tMain = createI18n({
     filterAll: 'Alle bestanden',
     dlgExportPdf: 'Exporteren als PDF',
     dlgExportHtml: 'Exporteren als HTML',
+    dlgExportMarkdown: 'Exporteren als Markdown',
     dlgPickExportDir: 'Exportmap kiezen',
     errUnsupportedExt: '.{ext}-bestanden worden niet ondersteund',
     errNotFile: 'geen bestand',
@@ -2397,6 +2358,7 @@ const tMain = createI18n({
     menuPageSetup: 'Pagina-instelling…',
     menuExportPdf: 'Exporteren als PDF…',
     menuExportHtml: 'Exporteren als HTML…',
+    menuExportMarkdown: 'Exporteren als Markdown…',
     menuExportImages: 'Exporteren als afbeeldingen…',
     menuPrint: 'Afdrukken…',
     menuEdit: 'Bewerken',
@@ -2486,11 +2448,6 @@ const tMain = createI18n({
     closeNoReplyMsg: 'Dokumen tidak bertindak balas dan mungkin ada perubahan yang belum disimpan.',
     closeNoReplyDetail: 'Tutup juga? Perubahan yang belum disimpan akan hilang.',
     btnCloseAnyway: 'Tutup Juga',
-    autosaveFoundTitle: 'Versi pulihan ditemui',
-    autosaveFoundBody:
-      'Terdapat perubahan yang belum disimpan daripada sesi terakhir anda. Pulihkan versi yang disimpan secara automatik?',
-    autosaveRestore: 'Pulihkan',
-    autosaveDiscard: 'Buang',
     btnDontSave: 'Jangan Simpan',
     btnCancel: 'Batal',
     extModifiedMsg: 'Fail telah diubah oleh program lain.',
@@ -2503,6 +2460,7 @@ const tMain = createI18n({
     filterAll: 'Semua Fail',
     dlgExportPdf: 'Eksport sebagai PDF',
     dlgExportHtml: 'Eksport sebagai HTML',
+    dlgExportMarkdown: 'Eksport sebagai Markdown',
     dlgPickExportDir: 'Pilih Folder Eksport',
     errUnsupportedExt: 'fail .{ext} tidak disokong',
     errNotFile: 'bukan fail',
@@ -2529,6 +2487,7 @@ const tMain = createI18n({
     menuPageSetup: 'Persediaan Halaman…',
     menuExportPdf: 'Eksport sebagai PDF…',
     menuExportHtml: 'Eksport sebagai HTML…',
+    menuExportMarkdown: 'Eksport sebagai Markdown…',
     menuExportImages: 'Eksport sebagai imej…',
     menuPrint: 'Cetak…',
     menuEdit: 'Edit',
@@ -2618,10 +2577,6 @@ const tMain = createI18n({
     closeNoReplyMsg: 'המסמך אינו מגיב וייתכן שיש בו שינויים שלא נשמרו.',
     closeNoReplyDetail: 'לסגור בכל זאת? שינויים שלא נשמרו יאבדו.',
     btnCloseAnyway: 'סגור בכל זאת',
-    autosaveFoundTitle: 'נמצאה גרסה משוחזרת',
-    autosaveFoundBody: 'קיימים שינויים שלא נשמרו מהפעלה הקודמת. לשחזר את הגרסה שנשמרה אוטומטית?',
-    autosaveRestore: 'שחזר',
-    autosaveDiscard: 'התעלם',
     btnDontSave: 'אל תשמור',
     btnCancel: 'ביטול',
     extModifiedMsg: 'הקובץ שונה על ידי תוכנית אחרת.',
@@ -2634,6 +2589,7 @@ const tMain = createI18n({
     filterAll: 'כל הקבצים',
     dlgExportPdf: 'ייצוא כ-PDF',
     dlgExportHtml: 'ייצוא כ-HTML',
+    dlgExportMarkdown: 'ייצוא כ-Markdown',
     dlgPickExportDir: 'בחירת תיקיית ייצוא',
     errUnsupportedExt: 'קובצי .{ext} אינם נתמכים',
     errNotFile: 'אינו קובץ',
@@ -2660,6 +2616,7 @@ const tMain = createI18n({
     menuPageSetup: 'הגדרת עמוד…',
     menuExportPdf: 'ייצוא כ-PDF…',
     menuExportHtml: 'ייצוא כ-HTML…',
+    menuExportMarkdown: 'ייצוא כ-Markdown…',
     menuExportImages: 'ייצוא כתמונות…',
     menuPrint: 'הדפסה…',
     menuEdit: 'עריכה',
@@ -2749,11 +2706,6 @@ const tMain = createI18n({
     closeNoReplyMsg: 'दस्तावेज़ प्रतिक्रिया नहीं दे रहा है और उसमें सहेजे न गए बदलाव हो सकते हैं।',
     closeNoReplyDetail: 'फिर भी बंद करें? सहेजे न गए बदलाव खो जाएँगे।',
     btnCloseAnyway: 'फिर भी बंद करें',
-    autosaveFoundTitle: 'पुनर्प्राप्त संस्करण मिला',
-    autosaveFoundBody:
-      'आपके पिछले सत्र से सहेजे नहीं गए परिवर्तन हैं। स्वतः सहेजा गया संस्करण पुनर्स्थापित करें?',
-    autosaveRestore: 'पुनर्स्थापित करें',
-    autosaveDiscard: 'छोड़ें',
     btnDontSave: 'न सहेजें',
     btnCancel: 'रद्द करें',
     extModifiedMsg: 'फ़ाइल को किसी अन्य प्रोग्राम ने बदल दिया है।',
@@ -2766,6 +2718,7 @@ const tMain = createI18n({
     filterAll: 'सभी फ़ाइलें',
     dlgExportPdf: 'PDF के रूप में निर्यात करें',
     dlgExportHtml: 'HTML के रूप में निर्यात करें',
+    dlgExportMarkdown: 'Markdown के रूप में निर्यात करें',
     dlgPickExportDir: 'निर्यात फ़ोल्डर चुनें',
     errUnsupportedExt: '.{ext} फ़ाइलें समर्थित नहीं हैं',
     errNotFile: 'फ़ाइल नहीं है',
@@ -2792,6 +2745,7 @@ const tMain = createI18n({
     menuPageSetup: 'पृष्ठ सेटअप…',
     menuExportPdf: 'PDF के रूप में निर्यात करें…',
     menuExportHtml: 'HTML के रूप में निर्यात करें…',
+    menuExportMarkdown: 'Markdown के रूप में निर्यात करें…',
     menuExportImages: 'छवियों के रूप में निर्यात…',
     menuPrint: 'प्रिंट करें…',
     menuEdit: 'संपादन',
@@ -2881,10 +2835,6 @@ const tMain = createI18n({
     closeNoReplyMsg: '文件沒有回應,可能有未儲存的變更。',
     closeNoReplyDetail: '仍要關閉嗎?未儲存的變更將遺失。',
     btnCloseAnyway: '仍要關閉',
-    autosaveFoundTitle: '發現自動復原版本',
-    autosaveFoundBody: '上次工作階段有未儲存的變更。要復原自動儲存的版本嗎?',
-    autosaveRestore: '復原',
-    autosaveDiscard: '放棄',
     btnDontSave: '不儲存',
     btnCancel: '取消',
     extModifiedMsg: '檔案已被其他程式修改。',
@@ -2897,6 +2847,7 @@ const tMain = createI18n({
     filterAll: '所有檔案',
     dlgExportPdf: '匯出為 PDF',
     dlgExportHtml: '匯出為 HTML',
+    dlgExportMarkdown: '匯出為 Markdown',
     dlgPickExportDir: '選擇匯出目錄',
     errUnsupportedExt: '暫不支援 .{ext} 類型',
     errNotFile: '不是檔案',
@@ -2922,6 +2873,7 @@ const tMain = createI18n({
     menuPageSetup: '版面設定…',
     menuExportPdf: '匯出為 PDF…',
     menuExportHtml: '匯出為 HTML…',
+    menuExportMarkdown: '匯出為 Markdown…',
     menuExportImages: '匯出為圖片…',
     menuPrint: '列印…',
     menuEdit: '編輯',
@@ -3152,12 +3104,9 @@ export function openExternalDocx(filePath: string | null): void {
   }
   void (async () => {
     const wcId = win.webContents.id
-    if (
-      rendererReady &&
-      !(await opensAsPasswordPrompt(filePath, wcId)) &&
-      !(await requestDocsClose(win.webContents, win))
-    ) {
-      return
+    if (rendererReady && !(await opensAsPasswordPrompt(filePath, wcId))) {
+      if (!(await requestDocsClose(win.webContents, win))) return
+      docsRecovery.settleClosedDocument(wcId, false)
     }
     return loadDocx(filePath, wcId)
   })()
@@ -3438,6 +3387,9 @@ function dropDocWriter(wcId: number): void {
   docDiskStates.delete(wcId)
   saveAsPicks.delete(wcId)
   forgetLazyMediaOwner(wcId)
+  bootedDocsRenderers.delete(wcId)
+  pendingOpenDecisions.delete(wcId)
+  pendingUntitledRecoveries.delete(wcId)
   // Destroyed renderers count as torn down too: window-close paths never run
   // teardownDocsRenderer, but an in-flight save handler resuming after the
   // destruction must still fail its re-check (wcIds are never reused, so the
@@ -3486,13 +3438,13 @@ export function teardownDocsRenderer(contents: WebContents): void {
   tornDownWcIds.add(contents.id)
   releaseSpellIgnores(contents.id)
   forgetLazyMediaOwner(contents.id)
-  // Sweep recovery copies for this renderer's documents: every non-crash close
-  // either saved (docs:save already cleared it) or explicitly discarded, so a
-  // copy still on disk here is a leftover from an in-flight recovery write.
-  // A renderer that crashed did neither: its last copy is what reopening the
-  // file offers back, so it stays.
+  // Settle this tab's recovery copies by how its close was decided: "Don't
+  // Save" (or a discarding close) and a save drop them, a clean close drops
+  // the ones this tab wrote. Nothing else does: a renderer that crashed keeps
+  // its last copies (the shell reopens them), and while the app is ending the
+  // store refuses the clean-close deletion, so a quit keeps what was written.
   const crashed = !contents.isDestroyed() && contents.isCrashed()
-  if (!crashed) for (const p of docWritablePaths.get(contents.id) ?? []) clearRecoveryCopy(p)
+  docsRecovery.settleClosedDocument(contents.id, crashed)
   // reclaim every per-wcId grant, not just doc saves — the orphaned renderer
   // must also lose its dialog-authorized PDF targets and disk-state cache
   docWritablePaths.delete(contents.id)
@@ -3502,76 +3454,210 @@ export function teardownDocsRenderer(contents: WebContents): void {
   if (!contents.isDestroyed()) contents.send('docs:teardown')
 }
 
-// ── Crash recovery: dirty renderers push a copy every 30s
-// (docs:write-recovery); a normal save cleans it up; open offers Restore/Discard ──
-const recoveryDir = () => userDataPath('docs-autosave')
-// the copy keeps its document's format: an ODT tab's copy is ODT bytes (.odt)
-const recoveryPathFor = (filePath: string) =>
-  join(
-    recoveryDir(),
-    `${createHash('sha1').update(filePath).digest('hex').slice(0, 16)}${recoveryExtFor(filePath)}`,
-  )
+// ── Crash recovery: a dirty renderer pushes a copy about every 30s
+// (docs:write-recovery) into the shared recovery store, in the folder and under
+// the names earlier versions used (docs-autosave, sha1(path)[0..16] + .docx or
+// .odt), so their copies are still offered. A save drops it; opening a file
+// with a copy asks first with the named per-file prompt (docs-recovery.ts) ──
+const docsRecovery = createDocsRecovery(
+  createRecoveryStore({ userDataDir: () => app.getPath('userData') }),
+)
 
-/** Bumped by every clear: an in-flight docs:write-recovery that started before
- * the bump must not recreate the file it is about to land (stale-recovery race). */
-const recoveryClearEpochs = new Map<string, number>()
+/**
+ * Launch-list decisions the shell handed over for a tab's next open of a
+ * path: the file opens with them instead of asking (one-shot, consumed when
+ * the open reaches the recovery step, i.e. after a password prompt).
+ */
+const pendingOpenDecisions = new Map<
+  number,
+  { filePath: string; decision: 'restore' | 'original' }
+>()
 
-function clearRecoveryCopy(filePath: string): void {
-  recoveryClearEpochs.set(filePath, (recoveryClearEpochs.get(filePath) ?? 0) + 1)
+function takeOpenDecision(wcId: number, filePath: string): 'restore' | 'original' | undefined {
+  const pending = pendingOpenDecisions.get(wcId)
+  if (!pending || pending.filePath !== filePath) return undefined
+  pendingOpenDecisions.delete(wcId)
+  return pending.decision
+}
+
+/**
+ * MCP/AI closed this tab without saving (the open-documents bridge's
+ * `unsaved: "discard"`): its copies go like a "Don't Save", so the next open
+ * does not offer the dropped edits back. Called before the tab is removed.
+ */
+export function discardDocsRecovery(contents: WebContents): void {
+  discardTabCopies(contents, openDocByWc.get(contents.id) ?? null)
+}
+
+/**
+ * Drop a tab's copies for "Don't Save" (or a discarding close), and tell its
+ * renderer: when the close does not go through after all (a quit cancelled
+ * at another tab) the document is still dirty, and its next tick must write a
+ * copy again even though nothing changed since the dropped one. Until then
+ * the shared store turns those ticks away (see resumeDiscardedCopies), so a
+ * tab waiting for the other tabs' prompts leaves nothing behind at the quit.
+ */
+function discardTabCopies(contents: WebContents, filePath: string | null): void {
+  docsRecovery.discard(contents.id, filePath)
+  if (!contents.isDestroyed()) contents.send('docs:recovery-copy-dropped')
+}
+
+/**
+ * The untitled document copy this tab writes, if any (the shell's session
+ * record, and reopening an untitled tab whose renderer crashed).
+ */
+export function docsRecoveryIdentity(webContentsId: number): RecoveryIdentity | null {
+  return docsRecovery.untitledOf(webContentsId)
+}
+
+/** docs renderers that have asked for their first document (they listen for docs:opened) */
+const bootedDocsRenderers = new Set<number>()
+
+type UntitledRecoveryOpen = OpenFileResult & { bytes: Buffer }
+
+/**
+ * Restored untitled copies for tabs that have not asked for their first
+ * document yet. Registered before the copy is read, so a renderer that boots
+ * meanwhile waits for it (docs:consume-copy) instead of starting blank.
+ */
+const pendingUntitledRecoveries = new Map<number, Promise<UntitledRecoveryOpen | null>>()
+
+const recoveryNowWaiters = new Map<string, () => void>()
+
+/**
+ * The OS is ending the session: every live docs renderer writes its copy now
+ * (no prompt). Resolves when each answered or after a few seconds.
+ */
+function writeDocsCopiesNow(): Promise<void> {
+  const targets = webContents
+    .getAllWebContents()
+    .filter(
+      (wc) =>
+        bootedDocsRenderers.has(wc.id) &&
+        !tornDownWcIds.has(wc.id) &&
+        !wc.isDestroyed() &&
+        !wc.isCrashed(),
+    )
+  return Promise.all(
+    targets.map(
+      (wc) =>
+        new Promise<void>((resolve) => {
+          const token = randomUUID()
+          const timer = setTimeout(() => {
+            recoveryNowWaiters.delete(token)
+            resolve()
+          }, 5000)
+          recoveryNowWaiters.set(token, () => {
+            clearTimeout(timer)
+            recoveryNowWaiters.delete(token)
+            resolve()
+          })
+          // still open: a "Don't Save" answered before a cancelled quit must
+          // not let this tab's teardown drop the copy it writes now
+          docsRecovery.noteStillOpen(wc.id)
+          try {
+            wc.send('docs:write-recovery-now', token)
+          } catch {
+            recoveryNowWaiters.get(token)?.()
+          }
+        }),
+    ),
+  ).then(() => undefined)
+}
+
+function openResultFor(contents: WebContents, result: OpenDocxResult): void {
+  if (!result || contents.isDestroyed()) return
+  contents.send('docs:opened', result)
+}
+
+/** the shell answered this tab's recovery question already (launch list) */
+async function openDocsFileWithDecision(
+  contents: WebContents,
+  request: { filePath: string; decision: 'restore' | 'original' },
+): Promise<void> {
+  if (contents.isDestroyed() || !docFormatOfPath(request.filePath)) return
+  pendingOpenDecisions.set(contents.id, request)
+  if (!bootedDocsRenderers.has(contents.id)) {
+    pendingWindowOpens.set(contents.id, request.filePath)
+    return
+  }
   try {
-    unlinkSync(recoveryPathFor(filePath))
-  } catch {
-    /* nothing to clean */
+    openResultFor(contents, await loadDocx(request.filePath, contents.id))
+  } catch (err) {
+    dialog.showErrorBox(tm('dlgOpenDoc'), String(err))
   }
 }
 
-interface MaybeRecoveredDocBytes {
-  bytes: Buffer
-  recovered: boolean
+/**
+ * Load a copy into this tab as an untitled document: the first save asks
+ * where (suggesting `saveAsDefaultPath`, the original's path when that file
+ * went missing), and the tab goes on writing that copy until it is saved.
+ */
+async function openDocsUntitledCopy(
+  contents: WebContents,
+  request: { copy: RecoveryIdentity; title: string; saveAsDefaultPath?: string },
+): Promise<void> {
+  if (contents.isDestroyed() || request.copy.kind !== 'docs') return
+  const loading = takeDocsUntitledCopy(contents, request)
+  if (!bootedDocsRenderers.has(contents.id)) {
+    // the renderer's first-document request takes it (whenever it comes)
+    pendingUntitledRecoveries.set(contents.id, loading)
+    await loading
+    return
+  }
+  const pending = await loading
+  if (!pending || contents.isDestroyed()) return
+  const { bytes, ...result } = pending
+  openResultFor(contents, { ...result, dataUrl: handOffBytes(bytes) })
 }
 
-/** On open, if a recovery copy newer than the original exists, ask whether to restore
- * (still points at the original path; only save persists it). */
-async function maybeRecoverDocBytes(
-  filePath: string,
-  original: Buffer,
-): Promise<MaybeRecoveredDocBytes> {
-  const asPath = recoveryPathFor(filePath)
-  try {
-    if (!existsSync(asPath)) return { bytes: original, recovered: false }
-    if (statSync(asPath).mtimeMs <= statSync(filePath).mtimeMs) {
-      // a crashed partial write bumps mtime yet corrupts the file — keep the copy
-      // then (an encrypted original is a CFB container, not a zip: intact too)
-      if (looksLikeZip(original) || isEncryptedDocx(original)) {
-        unlinkSync(asPath)
-        return { bytes: original, recovered: false }
-      }
-    }
-  } catch {
-    return { bytes: original, recovered: false }
+/** read a copy into this tab's untitled slot: its open result, or null when it cannot be loaded */
+async function takeDocsUntitledCopy(
+  contents: WebContents,
+  request: { copy: RecoveryIdentity; title: string; saveAsDefaultPath?: string },
+): Promise<UntitledRecoveryOpen | null> {
+  const ext: '.docx' | '.odt' =
+    'filePath' in request.copy
+      ? recoveryExtFor(request.copy.filePath)
+      : request.copy.ext === '.odt'
+        ? '.odt'
+        : '.docx'
+  // an encrypted copy needs its file's password, which only opening that file
+  // can ask for: it stays where it is for when the file is back
+  const taken = await docsRecovery.takeUntitledCopy(contents.id, request.copy, {
+    title: request.title,
+    ext,
+    accept: (bytes) => !isEncryptedDocx(bytes),
+  })
+  if (!taken || contents.isDestroyed()) return null
+  const suggested = request.saveAsDefaultPath ? basename(request.saveAsDefaultPath) : ''
+  // the tab title the shell kept, else the one the copy was written under
+  const title =
+    request.title ||
+    docsRecovery.store.copyInfo(taken.identity)?.title ||
+    taken.identity.untitledId.slice(0, 8)
+  const titled = docFormatOfPath(title) ? title : `${title}${ext}`
+  const name = suggested && docFormatOfPath(suggested) ? suggested : titled
+  return {
+    path: name,
+    name,
+    dataUrl: '',
+    hash: '',
+    untitledCopy: true,
+    recovered: true,
+    ...(request.saveAsDefaultPath ? { saveAsDefaultPath: request.saveAsDefaultPath } : {}),
+    bytes: taken.bytes,
   }
-  const options = {
-    type: 'question' as const,
-    buttons: [tm('autosaveRestore'), tm('autosaveDiscard')],
-    defaultId: 0,
-    cancelId: 1,
-    message: tm('autosaveFoundTitle'),
-    detail: tm('autosaveFoundBody'),
-  }
-  const parent = BrowserWindow.getFocusedWindow() ?? mainWindow
-  const r =
-    parent && !parent.isDestroyed()
-      ? await dialog.showMessageBox(parent, options)
-      : await dialog.showMessageBox(options)
-  if (r.response === 0) {
-    try {
-      return { bytes: await readFile(asPath), recovered: true }
-    } catch {
-      return { bytes: original, recovered: false }
-    }
-  }
-  clearRecoveryCopy(filePath)
-  return { bytes: original, recovered: false }
+}
+
+/** what the shell calls for Word tabs when it restores, answers the launch list, or the OS ends */
+const docsRecoveryEditor: RecoveryEditorContract = {
+  kind: 'docs',
+  writeCopiesNow: () => writeDocsCopiesNow().catch(() => {}),
+  openFileWithDecision: (contents, request) => openDocsFileWithDecision(contents, request),
+  openUntitledCopy: (contents, request) => openDocsUntitledCopy(contents, request),
+  // Word copies of a password document are encrypted with its password
+  isUnprotectable: () => false,
 }
 
 // Word's own .docx ceiling
@@ -3619,17 +3705,31 @@ async function loadDocx(
   // reopen with the user's password), so a bad save never loses the source file
   const hash = lazy?.hash ?? sha256Hex(original)
   await archiveOriginal(filePath, hash, size)
-  const recovery = await maybeRecoverDocBytes(filePath, plainBytes)
-  let bytes = recovery.bytes
-  let recovered = recovery.recovered
+  // a recovery copy is offered before the content loads: the named per-file
+  // prompt (Esc/close = restore; a file newer than the copy is said, never
+  // silently dropped), or the launch list's decision without asking. The
+  // original path stays the save target and the pass-through base.
+  const recovery = await docsRecovery.resolveOpen({
+    filePath,
+    decision: takeOpenDecision(wcId, filePath),
+    dialog,
+    parent:
+      hostWindowFor(webContents.fromId(wcId)) ?? BrowserWindow.getFocusedWindow() ?? mainWindow,
+    lang: getUiLang(),
+  })
+  let bytes = recovery.action === 'restore' ? recovery.bytes : plainBytes
+  let recovered = recovery.action === 'restore'
   // recovery copies of a protected document are themselves encrypted (see
-  // docs:write-recovery); an unreadable copy falls back to the original
+  // docs:write-recovery); an unreadable copy falls back to the original. No
+  // tab holds that copy then: it waits as "later" for the next open of the
+  // file instead of staying undecided (which would judge every quit abnormal).
   if (encrypted && isEncryptedDocx(bytes)) {
     try {
       bytes = await decryptRecoveryCopy(wcId, filePath, bytes)
     } catch {
       bytes = plainBytes
       recovered = false
+      docsRecovery.restoreFailed(filePath)
     }
   }
   if (recovered && format === 'docx') await adoptLazyMediaHashes(bytes, filePath, wcId)
@@ -3829,6 +3929,7 @@ export function registerAiIpc(): void {
       for (const wc of webContents.getAllWebContents())
         if (!wc.isDestroyed()) wc.send(channel, statuses)
     },
+    loginWindowText: (provider) => aiSubscriptionLoginWindowText(getUiLang(), provider),
   })
 
   ipcMain.handle('ai:get-settings', async (): Promise<AiSettings> => storedAiSettings())
@@ -3848,7 +3949,7 @@ export function registerAiIpc(): void {
       console.warn('[ai] rejected invalid ai:set-settings payload')
       return
     }
-    writeJsonAtomic(SETTINGS_PATH(), sanitized)
+    writeJsonAtomic(SETTINGS_PATH(), sealAiSecrets(sanitized))
     broadcastAiSettingsChanged()
   })
 
@@ -3857,7 +3958,7 @@ export function registerAiIpc(): void {
     writeSettings: (settings) => {
       const sanitized = sanitizeAiSettings(settings)
       if (!sanitized) return false
-      writeJsonAtomic(SETTINGS_PATH(), sanitized)
+      writeJsonAtomic(SETTINGS_PATH(), sealAiSecrets(sanitized))
       broadcastAiSettingsChanged()
       return true
     },
@@ -4335,6 +4436,8 @@ const saveAsPicks = new Map<number, string>()
 /** document/attachment/window IPC (everything except the AI proxy above) */
 export function registerDocsIpc(): void {
   registerZoteroIpc()
+  // the shell reaches Word tabs' crash recovery through this (restore, launch list, OS end)
+  registerRecoveryEditor(docsRecoveryEditor)
   // the design templates' fonts: shipped once (resources/template-fonts), served to the
   // renderer on the media scheme and indexed for vertical metrics and family info
   const fontsDir = templateFontsDir({
@@ -4351,9 +4454,13 @@ export function registerDocsIpc(): void {
   // shared with the other editor modules — last (identical) registration wins
   ipcMain.removeHandler('app:get-language')
   ipcMain.handle('app:get-language', () => getUiLang())
-  ipcMain.handle('docs:confirm-document-replace', (event) =>
-    requestDocsClose(event.sender, dialogParent(event)),
-  )
+  ipcMain.handle('docs:confirm-document-replace', async (event) => {
+    const proceed = await requestDocsClose(event.sender, dialogParent(event))
+    // another document takes this tab: settle the copies of the one leaving
+    // as for a closed tab (saved, discarded, or clean)
+    if (proceed) docsRecovery.settleClosedDocument(event.sender.id, false)
+    return proceed
+  })
   ipcMain.handle('docs:system-locale', () => app.getSystemLocale())
 
   configureMetricsCache(userDataPath('font-metrics'))
@@ -4519,6 +4626,20 @@ export function registerDocsIpc(): void {
    * archive: the document has no file until its first save asks where.
    */
   ipcMain.handle('docs:consume-copy', async (event): Promise<OpenFileResult | null> => {
+    // the renderer asks this one last of its first-document queues: from now
+    // on a document for it goes out as docs:opened
+    bootedDocsRenderers.add(event.sender.id)
+    // a restored untitled recovery copy (crash recovery) comes first, even
+    // while it is still being read
+    const restoring = pendingUntitledRecoveries.get(event.sender.id)
+    if (restoring) {
+      pendingUntitledRecoveries.delete(event.sender.id)
+      const restored = await restoring.catch(() => null)
+      if (restored && !event.sender.isDestroyed()) {
+        const { bytes, ...result } = restored
+        return { ...result, dataUrl: handOffBytes(bytes) }
+      }
+    }
     const copy = pendingDocCopies.get(event.sender.id)
     pendingDocCopies.delete(event.sender.id)
     if (!copy || !docFormatOfPath(copy.name)) return null
@@ -4612,7 +4733,9 @@ export function registerDocsIpc(): void {
         // Commit immediately after the final await: intents received during
         // post-write bookkeeping are included, with no later async race.
         const passwordIntentPending = commitSavePassword(event.sender.id, passwordState, filePath)
-        clearRecoveryCopy(filePath)
+        // the saved path's copy, and the tab's untitled slot (an untitled
+        // write that crossed the document's first save) are stale now
+        docsRecovery.noteSaved(event.sender.id, [filePath])
         pushRecent(filePath)
         return {
           ok: true,
@@ -4625,47 +4748,67 @@ export function registerDocsIpc(): void {
     },
   )
 
-  // crash-recovery copy from a dirty renderer; best-effort, never surfaces
-  ipcMain.handle('docs:write-recovery', async (event, filePath: string, data: ArrayBuffer) => {
-    try {
-      if (tornDownWcIds.has(event.sender.id)) return { ok: false }
-      if (typeof filePath !== 'string' || !canDocWrite(event.sender.id, filePath))
-        return { ok: false }
-      // snapshot before any await: a save or discard that clears the recovery
-      // copy while this write is in flight bumps the epoch and invalidates it
-      const epoch = recoveryClearEpochs.get(filePath) ?? 0
-      await mkdir(recoveryDir(), { recursive: true })
-      // Recovery follows the current disk state, never the desired next-save
-      // password. Missing state for an encrypted disk file skips the tick so
-      // plaintext can never be written as its recovery copy.
-      // An ODT tab's copy is the ODT itself (the renderer patched it like a
-      // save), so restoring and saving it keeps the format; docx bytes are
-      // never accepted for an .odt document.
-      const plain = Buffer.from(data)
-      const bytes =
-        docFormatOfPath(filePath) === 'odt'
-          ? isOdtPackage(plain)
-            ? plain
-            : null
-          : prepareRecoveryDocx(event.sender.id, filePath, plain)
-      if (!bytes) return { ok: false }
-      await atomicWriteFile(recoveryPathFor(filePath), bytes)
-      // The tab may have been closed ("Don't Save" clears the copy, teardown
-      // revokes access) or the document saved (docs:save clears the copy) while
-      // the write was in flight. A write that lost either race would offer
-      // discarded or already-saved content as recovery on the next open — undo it.
-      if (
-        tornDownWcIds.has(event.sender.id) ||
-        !canDocWrite(event.sender.id, filePath) ||
-        (recoveryClearEpochs.get(filePath) ?? 0) !== epoch
-      ) {
-        clearRecoveryCopy(filePath)
+  // Crash-recovery copy from a dirty renderer, into the shared store; never
+  // surfaces. `filePath` null: the tab's document was never saved, its copy
+  // goes to the tab's untitled slot in app data (never a user folder).
+  // `failed` tells the renderer to back off for a while (a disk error).
+  ipcMain.handle(
+    'docs:write-recovery',
+    async (
+      event,
+      filePath: string | null,
+      data: ArrayBuffer,
+      meta?: { title?: unknown; format?: unknown },
+    ): Promise<{ ok: boolean; failed?: boolean }> => {
+      const wcId = event.sender.id
+      if (tornDownWcIds.has(wcId) || !(data instanceof ArrayBuffer)) return { ok: false }
+      const untitled = filePath === null
+      if (!untitled && (typeof filePath !== 'string' || !canDocWrite(wcId, filePath))) {
         return { ok: false }
       }
-      return { ok: true }
-    } catch {
-      return { ok: false }
-    }
+      const format: DocFormat = untitled
+        ? meta?.format === 'odt'
+          ? 'odt'
+          : 'docx'
+        : (docFormatOfPath(filePath) ?? 'docx')
+      const title = typeof meta?.title === 'string' ? meta.title.slice(0, 260) : ''
+      try {
+        const result = await docsRecovery.writeCopy(
+          wcId,
+          untitled ? { untitledExt: format === 'odt' ? '.odt' : '.docx' } : { filePath },
+          // Runs after the write ticket is taken: a save landing while the
+          // pictures are inlined still wins. The copy is what a save would
+          // write (lazily served pictures inlined), so it stands on its own
+          // when the opened file is gone. Recovery follows the current disk
+          // state, read after that wait, never the desired next-save
+          // password. Missing state for an encrypted disk file skips the tick
+          // so plaintext can never be written as its copy; so does a
+          // never-saved document with a password waiting for its first save
+          // (there is no file whose password reopening could ask). An ODT
+          // tab's copy is the ODT itself (the renderer patched it like a
+          // save), so restoring and saving it keeps the format; docx bytes
+          // are never accepted for an ODT document.
+          () =>
+            prepareRecoveryBytes(format, Buffer.from(data), {
+              materialize: materializeLazyDocx,
+              protect: (plain) =>
+                untitled
+                  ? snapshotDocPassword(wcId, null).password === null
+                    ? plain
+                    : null
+                  : prepareRecoveryDocx(wcId, filePath, plain),
+            }),
+          untitled ? title : basename(filePath),
+        )
+        return { ok: result === 'written' }
+      } catch {
+        return { ok: false, failed: true }
+      }
+    },
+  )
+
+  ipcMain.on('docs:write-recovery-now-done', (_event, token: unknown) => {
+    if (typeof token === 'string') recoveryNowWaiters.get(token)?.()
   })
 
   // Blink only respells an editable as a consequence of real (trusted) typing
@@ -4846,6 +4989,10 @@ export function registerDocsIpc(): void {
         pointLazyMediaAt(hashes, filePath, event.sender.id, encrypted ? plain : undefined)
         if (tornDownWcIds.has(event.sender.id)) return { ok: false }
         const passwordIntentPending = commitSavePassword(event.sender.id, passwordState, filePath)
+        // the edits now live in the picked file: the source document's copy (or
+        // its untitled copy when it had no file) and any copy of the target go
+        const source = typeof sourcePath === 'string' && sourcePath ? sourcePath : null
+        docsRecovery.noteSaved(event.sender.id, source ? [filePath, source] : [filePath])
         pushRecent(filePath)
         // the renderer has no path yet to match a rename notification against,
         // so the reply must carry the path it may save to next
@@ -4924,6 +5071,8 @@ export function registerDocsIpc(): void {
         return { ok: false }
       }
       const passwordIntentPending = commitSavePassword(event.sender.id, passwordState, filePath)
+      // the first save of a never-saved document: its untitled copy is stale
+      docsRecovery.noteSaved(event.sender.id, [filePath])
       pushRecent(filePath)
       const savedPath = notifyFileSaved(event.sender, filePath)
       return {
@@ -4989,6 +5138,13 @@ export function registerDocsIpc(): void {
         pointLazyMediaAt(hashes, filePath, event.sender.id, encrypted ? plain : undefined)
         if (tornDownWcIds.has(event.sender.id)) return rollback()
         const passwordIntentPending = commitSavePassword(event.sender.id, passwordState, filePath)
+        // an MCP save of this tab: the saved path's copy, the copy of the path
+        // the tab leaves for it (like Save As), and its untitled one are stale
+        const previous = openDocByWc.get(event.sender.id) ?? null
+        docsRecovery.noteSaved(
+          event.sender.id,
+          previous && previous !== filePath ? [filePath, previous] : [filePath],
+        )
         pushRecent(filePath)
         rememberOpenDoc(event.sender.id, filePath)
         notifyFileSaved(event.sender, filePath)
@@ -5152,18 +5308,30 @@ export function registerDocsIpc(): void {
   // renderer print scale (inverse of the preview's print zoom, see print-zoom.ts)
   // Infinity passes a `> 0` check, so require finiteness before handing it to Chromium.
   const pdfScale = (scale?: number) => printScaleOption(scale)
+  const withInternalLinks = async (data: Buffer, links: unknown): Promise<Buffer> => {
+    if (!Array.isArray(links) || links.length === 0) return data
+    const { PDFDocument } = await import('pdf-lib')
+    const pdf = await PDFDocument.load(data)
+    if (addPdfInternalLinks(pdf, links) === 0) return data
+    return Buffer.from(await pdf.save())
+  }
   const printScale = (scale?: number) =>
     typeof scale === 'number' && Number.isFinite(scale) && scale > 0 && scale !== 1
       ? { scaleFactor: Math.round(scale * 100) }
       : {}
 
-  ipcMain.handle('docs:print', async (event, scale?: number) => {
+  ipcMain.handle('docs:printers', async (event) => {
+    const printers = await event.sender.getPrintersAsync()
+    return printers.map((p) => ({ name: p.name, displayName: p.displayName || p.name }))
+  })
+
+  ipcMain.handle('docs:print', async (event, scale?: number, job?: unknown) => {
     // print the calling tab's own content; zero margins — the docx page padding provides them.
-    // Resolves when the system dialog is dismissed; the print dialog stays open on cancel
-    // (ok=false without error) and surfaces real failures.
+    // Resolves when the system dialog is dismissed (or the silent job is queued); the print
+    // dialog stays open on cancel (ok=false without error) and surfaces real failures.
     return new Promise<{ ok: boolean; error?: string }>((resolve) => {
       event.sender.print(
-        { margins: { marginType: 'none' }, ...printScale(scale) },
+        { margins: { marginType: 'none' }, ...printScale(scale), ...printJobOptions(job) },
         (success, failureReason) => {
           resolve({
             ok: success,
@@ -5183,6 +5351,7 @@ export function registerDocsIpc(): void {
       pageHeightTwips: number,
       outPath?: string,
       scale?: number,
+      links?: unknown,
     ) => {
       // Renderer-supplied page geometry reaches Chromium printToPDF verbatim:
       // reject non-finite/out-of-range sizes (0.1in..50in) and scales (0.1..5),
@@ -5207,7 +5376,7 @@ export function registerDocsIpc(): void {
         allowPdfWrite(event.sender.id, filePath)
       }
       try {
-        const data = await event.sender.printToPDF({
+        const printed = await event.sender.printToPDF({
           printBackground: true,
           // custom pageSize is in inches; the docx page padding provides the margins
           pageSize: {
@@ -5217,6 +5386,7 @@ export function registerDocsIpc(): void {
           margins: { top: 0, bottom: 0, left: 0, right: 0 },
           ...pdfScale(scale),
         })
+        const data = await withInternalLinks(printed, links)
         await atomicWriteFile(filePath, data)
         if (!isImageExportTemp(event.sender.id, filePath)) openGeneratedFile(filePath)
         return { ok: true, path: filePath }
@@ -5323,6 +5493,49 @@ export function registerDocsIpc(): void {
     },
   )
 
+  ipcMain.handle(
+    'docs:export-markdown',
+    async (
+      event,
+      defaultName: string,
+      markdown: string,
+      images: MarkdownImage[],
+      outPath?: string,
+    ) => {
+      if (typeof markdown !== 'string' || !markdown) return { ok: false, error: 'empty document' }
+      if (!Array.isArray(images)) return { ok: false, error: 'bad image list' }
+      let filePath = outPath ?? null
+      if (filePath && !canPdfWrite(event.sender.id, filePath)) {
+        return { ok: false, error: 'export target is not an authorized path' }
+      }
+      if (!filePath) {
+        const result = await saveDialog(event, {
+          title: tm('dlgExportMarkdown'),
+          defaultPath: defaultName.replace(/\.docx$/i, '') + '.md',
+          filters: [{ name: 'Markdown', extensions: ['md'] }],
+        })
+        if (result.canceled || !result.filePath) return { ok: false }
+        filePath = result.filePath
+        allowPdfWrite(event.sender.id, filePath)
+      }
+      try {
+        const written = await writeMarkdownMedia(filePath, images)
+        // the Markdown destination was escaped before the swap: parentheses must not survive it
+        const mediaDir = encodeURIComponent(
+          basename(filePath).replace(/\.md$/i, '') + '_files',
+        ).replace(/[()]/g, (c) => (c === '(' ? '%28' : '%29'))
+        await atomicWriteFile(
+          filePath,
+          Buffer.from(markdown.split(`${MARKDOWN_MEDIA_DIR_TOKEN}/`).join(`${mediaDir}/`), 'utf8'),
+        )
+        openGeneratedFile(filePath)
+        return { ok: true, path: filePath, imagesDropped: images.length - written }
+      } catch (err) {
+        return { ok: false, error: String(err), path: filePath }
+      }
+    },
+  )
+
   // mixed paper-size export: the renderer prints group by group per size (other pages hidden via CSS); this produces one group's bytes
   ipcMain.handle(
     'docs:print-pdf-buffer',
@@ -5352,7 +5565,13 @@ export function registerDocsIpc(): void {
   // merge grouped PDF fragments into one file in page order (pdf-lib)
   ipcMain.handle(
     'docs:save-merged-pdf',
-    async (event, defaultName: string, base64Parts: string[], outPath?: string) => {
+    async (
+      event,
+      defaultName: string,
+      base64Parts: string[],
+      outPath?: string,
+      links?: unknown,
+    ) => {
       let filePath = outPath ?? null
       if (filePath && !canPdfWrite(event.sender.id, filePath)) {
         return { ok: false, error: 'export target is not an authorized path' }
@@ -5375,6 +5594,7 @@ export function registerDocsIpc(): void {
           const pages = await merged.copyPages(part, part.getPageIndices())
           for (const page of pages) merged.addPage(page)
         }
+        if (Array.isArray(links) && links.length > 0) addPdfInternalLinks(merged, links)
         await atomicWriteFile(filePath, Buffer.from(await merged.save()))
         if (!isImageExportTemp(event.sender.id, filePath)) openGeneratedFile(filePath)
         return { ok: true, path: filePath }
@@ -5437,6 +5657,30 @@ export function setDocsShellHooks(hooks: DocsShellHooks | null): void {
 /** After writing an exported/AI-generated file: open it in the right tab
  * (shell) or reveal it in the folder (standalone). Tab-opening failure must
  * not report the write itself as failed — the file is already persisted. */
+/**
+ * Pictures of a Markdown export land in `<file>_files/` next to it, like a
+ * browser's "save page" folder. Returns how many were written; unreadable
+ * sources are skipped and the reference in the Markdown dangles.
+ */
+async function writeMarkdownMedia(mdPath: string, images: MarkdownImage[]): Promise<number> {
+  if (images.length === 0) return 0
+  const dir = join(dirname(mdPath), basename(mdPath).replace(/\.md$/i, '') + '_files')
+  let written = 0
+  for (const img of images) {
+    if (typeof img?.name !== 'string' || !/^image\d+\.\w+$/.test(img.name)) continue
+    if (typeof img.src !== 'string') continue
+    const data = /^data:image\/[\w.+-]+;base64,(.*)$/s.exec(img.src)
+    const body = data
+      ? Buffer.from(data[1], 'base64')
+      : ((await readLazyMedia(img.src).catch(() => null))?.body ?? null)
+    if (!body || body.length === 0) continue
+    if (written === 0) await mkdir(dir, { recursive: true })
+    await atomicWriteFile(join(dir, img.name), body)
+    written++
+  }
+  return written
+}
+
 function openGeneratedFile(path: string): void {
   // Headless export has no tab strip and no user: revealing the file in Finder
   // would be the only visible effect of a run that must stay silent.
@@ -5648,6 +5892,7 @@ export function buildDocsMenu(): void {
         { label: tm('menuPageSetup'), click: () => sendCommand('page-setup') },
         { label: tm('menuExportPdf'), click: () => sendCommand('export-pdf') },
         { label: tm('menuExportHtml'), click: () => sendCommand('export-html') },
+        { label: tm('menuExportMarkdown'), click: () => sendCommand('export-markdown') },
         { label: tm('menuExportImages'), click: () => sendCommand('export-images') },
         {
           label: tm('menuPrint'),
@@ -5904,7 +6149,7 @@ export function buildDocsMenu(): void {
           click: () => sendCommand('shortcuts'),
         },
         { type: 'separator' },
-        checkUpdatesMenuItem(appMenuLabels(getUiLang())),
+        ...helpCheckUpdatesItems(appMenuLabels(getUiLang())),
         aboutMenuItem(appMenuLabels(getUiLang())),
       ],
     },
@@ -6097,6 +6342,8 @@ ipcMain.on('docs:close-check-result', (event, state: unknown) => {
   if (!waiter) return
   closeCheckWaiters.delete(event.sender.id)
   const s = state as { dirty?: unknown; autoSave?: unknown; filePath?: unknown } | boolean
+  // a clean answer lets this tab's close drop the copies it wrote
+  docsRecovery.noteCloseCheck(event.sender.id, typeof s === 'boolean' ? s : s?.dirty === true)
   waiter(
     typeof s === 'boolean'
       ? { dirty: s, autoSave: false }
@@ -6203,10 +6450,17 @@ async function performDocsClose(
       parent && !parent.isDestroyed()
         ? await dialog.showMessageBox(parent, options)
         : await dialog.showMessageBox(options)
-    return response === 0
+    if (response !== 0) return false
+    // A hung renderer cannot save, and its last copy is the only record of
+    // its edits: keep it (set aside for later), as for a crashed tab
+    docsRecovery.abandon(contents.id, openDocByWc.get(contents.id) ?? null)
+    return true
   }
   // autosave on (and has a path, already checked when the renderer reported): save silently and proceed; only prompt on failure
-  if (state.autoSave && (await requestRendererSave(contents))) return true
+  if (state.autoSave && (await requestRendererSave(contents))) {
+    docsRecovery.noteClosedSaved(contents.id)
+    return true
+  }
   const options = {
     type: 'warning' as const,
     message: tm('closeUnsavedMsg'),
@@ -6222,11 +6476,14 @@ async function performDocsClose(
       : await dialog.showMessageBox(options)
   if (response === 2) return false
   if (response === 1) {
-    // Explicitly discarded: also drop the recovery copy so the next open doesn't offer it
-    if (state.filePath) clearRecoveryCopy(state.filePath)
+    // Explicitly discarded: also drop the recovery copies (the file's, or the
+    // untitled document's) so nothing offers the dropped edits back
+    discardTabCopies(contents, state.filePath ?? null)
     return true
   }
-  return requestRendererSave(contents)
+  const saved = await requestRendererSave(contents)
+  if (saved) docsRecovery.noteClosedSaved(contents.id)
+  return saved
 }
 
 export function createDocsView(openPath?: string): WebContentsView {

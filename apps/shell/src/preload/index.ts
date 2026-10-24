@@ -21,6 +21,7 @@ import { USER_SKILLS_BRIDGE_KEY } from '@genoffice/electron-utils/user-skills-ch
 import type { UpdateUiState } from '../shared/update-api'
 import { normalizeAiPanelPrefs } from '@genoffice/ui/ai-panel-prefs'
 import type {
+  AuthorNameSetting,
   DefaultAppStatus,
   FolderListing,
   FolderRoot,
@@ -35,6 +36,12 @@ import type {
   FileSearchSettings,
 } from '../shared/home-api'
 import { HOME_CHANNELS } from '../shared/home-api'
+import { RECOVERY_LIST_CHANNELS } from '../shared/recovery-list-api'
+import type {
+  RecoveryListApi,
+  RecoveryListItem,
+  RecoveryListResult,
+} from '../shared/recovery-list-api'
 import { INTEGRATIONS_CHANNELS } from '../shared/integrations-api'
 import type {
   IntegrationsApi,
@@ -128,6 +135,14 @@ function normalizeDefaultAppStatus(result: unknown): DefaultAppStatus {
   }
 }
 
+function normalizeAuthorNameSetting(result: unknown): AuthorNameSetting {
+  const r = (result ?? {}) as Partial<AuthorNameSetting>
+  return {
+    value: typeof r.value === 'string' ? r.value : '',
+    fallback: typeof r.fallback === 'string' ? r.fallback : '',
+  }
+}
+
 const homeApi: HomeApi = {
   async recents(query) {
     return asRecentPage(await ipcRenderer.invoke(HOME_CHANNELS.recents, query))
@@ -203,6 +218,9 @@ const homeApi: HomeApi = {
   },
   async kbCloseScope(scope) {
     await ipcRenderer.invoke('kb:close-scope', scope)
+  },
+  async kbCreateDocument(request) {
+    return ipcRenderer.invoke('kb:create-document', request)
   },
   async aiGetSettings() {
     return ipcRenderer.invoke('ai:get-settings')
@@ -460,6 +478,12 @@ const homeApi: HomeApi = {
   },
   async openMcpLogFile() {
     await ipcRenderer.invoke(HOME_CHANNELS.openMcpLogFile)
+  },
+  async getAuthorName() {
+    return normalizeAuthorNameSetting(await ipcRenderer.invoke(HOME_CHANNELS.getAuthorName))
+  },
+  async setAuthorName(value) {
+    return normalizeAuthorNameSetting(await ipcRenderer.invoke(HOME_CHANNELS.setAuthorName, value))
   },
   async getAiPanelPrefs() {
     return normalizeAiPanelPrefs(await ipcRenderer.invoke(HOME_CHANNELS.getAiPanelPrefs))
@@ -728,6 +752,9 @@ const subscriptionApi: SubscriptionApi = {
   async openInstallHelp(provider) {
     await ipcRenderer.invoke(SHELL_SUBSCRIPTION_CHANNELS.openInstallHelp, provider)
   },
+  async openConnectHelp(path) {
+    await ipcRenderer.invoke(SHELL_SUBSCRIPTION_CHANNELS.openConnectHelp, path)
+  },
 }
 contextBridge.exposeInMainWorld('aiOfficeSubscription', subscriptionApi)
 
@@ -811,6 +838,13 @@ const tabsApi: TabsApi = {
     ipcRenderer.on('app:chrome-pressed', listener)
     return () => ipcRenderer.removeListener('app:chrome-pressed', listener)
   },
+  onStartRename(handler) {
+    const listener = (_event: IpcRendererEvent, id: unknown) => {
+      if (typeof id === 'string') handler(id)
+    }
+    ipcRenderer.on(TABS_CHANNELS.startRename, listener)
+    return () => ipcRenderer.removeListener(TABS_CHANNELS.startRename, listener)
+  },
 }
 
 contextBridge.exposeInMainWorld('aiOfficeTabs', tabsApi)
@@ -883,6 +917,16 @@ const quickLookHomeApi: QuickLookHomeApi = {
   },
 }
 contextBridge.exposeInMainWorld('aiOfficeQuickLookHome', quickLookHomeApi)
+
+// Home's launch recovery list (crash recovery spec 6): the rows the main
+// process asks about at launch, and the user's choices back
+const recoveryListApi: RecoveryListApi = {
+  getLaunchRecoveryList: () =>
+    ipcRenderer.invoke(RECOVERY_LIST_CHANNELS.get) as Promise<RecoveryListItem[] | null>,
+  submitLaunchRecovery: (result: RecoveryListResult) =>
+    ipcRenderer.invoke(RECOVERY_LIST_CHANNELS.submit, result) as Promise<void>,
+}
+contextBridge.exposeInMainWorld('aiOfficeRecovery', recoveryListApi)
 
 // open documents dragged from the OS anywhere over Home or the tab strip
 installDropOpenBridge()

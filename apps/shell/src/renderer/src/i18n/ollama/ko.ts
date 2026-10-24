@@ -1,0 +1,27 @@
+import type { zh } from './zh'
+export const ko = {
+  title: 'Ollama',
+  localServer: '로컬 Ollama',
+  description:
+    '서버를 추가하고 모델을 등록한 뒤, AI 설정이나 문서의 모델 선택기에서 골라 쓰세요. 문서 편집에는 도구 호출을 지원하는 모델이 필요합니다.',
+  addServer: '서버 추가',
+  empty: '등록된 서버가 없습니다.',
+  serverName: '서버 이름',
+  editServer: '서버 수정',
+  installed: '설치된 모델',
+  registered: '등록된 모델',
+  register: '등록',
+  registeredBadge: '등록됨',
+  noModels: '서버에 설치된 모델이 없습니다.',
+  noRegistered: '설치된 모델에서 사용할 모델을 등록하세요.',
+  apiKeyOptional: 'API Key (선택)',
+  invalidUrl: '사용자 이름이나 비밀번호가 없는 올바른 HTTP 또는 HTTPS 주소를 입력하세요.',
+  loadFailed: '설정을 읽지 못했습니다. 다시 시도해 주세요.',
+  saveFailed: '변경 사항을 저장하지 못했습니다. 다시 시도해 주세요.',
+  connectFailed: '모델 목록을 가져오지 못했습니다. 서버 실행 상태, 주소와 API Key를 확인하세요.',
+  removeConfirm:
+    '이 서버와 등록된 모델을 목록에서 삭제할까요? 서버에 설치된 모델 파일은 지우지 않습니다.',
+  loading: '설정을 읽는 중…',
+  retry: '다시 시도',
+  refresh: '연결 테스트 및 모델 목록 새로고침',
+} satisfies Record<keyof typeof zh, string>

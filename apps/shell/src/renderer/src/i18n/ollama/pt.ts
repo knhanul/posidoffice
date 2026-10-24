@@ -1,0 +1,28 @@
+import type { zh } from './zh'
+export const pt = {
+  title: 'Ollama',
+  localServer: 'Ollama local',
+  description:
+    'Adicione servidores e registre modelos, depois escolha um nas configurações de IA ou no documento. A edição de documentos requer um modelo com suporte a chamadas de ferramentas.',
+  addServer: 'Adicionar servidor',
+  empty: 'Nenhum servidor adicionado.',
+  serverName: 'Nome do servidor',
+  editServer: 'Editar servidor',
+  installed: 'Modelos instalados',
+  registered: 'Modelos registrados',
+  register: 'Registrar',
+  registeredBadge: 'Registrado',
+  noModels: 'Não há modelos instalados neste servidor.',
+  noRegistered: 'Registre um modelo da lista de modelos instalados.',
+  apiKeyOptional: 'Chave API (opcional)',
+  invalidUrl: 'Insira um endereço HTTP ou HTTPS válido sem nome de usuário ou senha.',
+  loadFailed: 'Não foi possível ler as configurações. Tente novamente.',
+  saveFailed: 'Não foi possível salvar as alterações. Tente novamente.',
+  connectFailed:
+    'Não foi possível obter os modelos. Verifique o servidor, o endereço e a chave API.',
+  removeConfirm:
+    'Remover este servidor e seus modelos registrados da lista? Os arquivos de modelos no servidor serão mantidos.',
+  loading: 'Lendo configurações…',
+  retry: 'Tentar novamente',
+  refresh: 'Testar conexão e atualizar modelos',
+} satisfies Record<keyof typeof zh, string>

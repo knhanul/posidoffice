@@ -1,4 +1,5 @@
 import { resolveCustomEndpoints } from './custom-endpoints'
+import { normalizeOllamaServers } from './ollama-servers'
 import { defaultAiMediaSettings, resolveAiMediaSettings } from './media'
 import { defaultAiSearchSettings, resolveAiSearchSettings } from './search-settings'
 import type {
@@ -597,6 +598,9 @@ export function resolveAiSettings(stored: unknown, defaults: AiSettings): AiSett
     provider: settings.provider ?? defaults.provider,
     customEndpoints: settings.customEndpoints,
     customEndpoint: settings.customEndpoint,
+    ...(Array.isArray(settings.ollamaServers)
+      ? { ollamaServers: normalizeOllamaServers(settings.ollamaServers) }
+      : {}),
     ...(readUrl ? { readUrl } : {}),
     // Trim before migrating: a pasted " deepseek-reasoner " must still hit
     // the retired-id remap instead of being sent to the API verbatim.

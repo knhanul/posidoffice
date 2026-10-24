@@ -1,0 +1,27 @@
+import type { zh } from './zh'
+export const id = {
+  title: 'Ollama',
+  localServer: 'Ollama lokal',
+  description:
+    'Tambahkan server dan daftarkan model, lalu pilih di pengaturan AI atau pemilih model dokumen. Pengeditan dokumen memerlukan model yang mendukung pemanggilan alat.',
+  addServer: 'Tambah server',
+  empty: 'Belum ada server terdaftar.',
+  serverName: 'Nama server',
+  editServer: 'Edit server',
+  installed: 'Model terpasang',
+  registered: 'Model terdaftar',
+  register: 'Daftarkan',
+  registeredBadge: 'Terdaftar',
+  noModels: 'Tidak ada model terpasang di server ini.',
+  noRegistered: 'Daftarkan model dari daftar model terpasang.',
+  apiKeyOptional: 'Kunci API (opsional)',
+  invalidUrl: 'Masukkan alamat HTTP atau HTTPS yang valid tanpa nama pengguna atau kata sandi.',
+  loadFailed: 'Pengaturan tidak dapat dibaca. Coba lagi.',
+  saveFailed: 'Perubahan tidak dapat disimpan. Coba lagi.',
+  connectFailed: 'Model tidak dapat diambil. Periksa server, alamat, dan kunci API.',
+  removeConfirm:
+    'Hapus server ini dan model terdaftarnya dari daftar? Berkas model di server akan tetap ada.',
+  loading: 'Membaca pengaturan…',
+  retry: 'Coba lagi',
+  refresh: 'Uji koneksi dan muat ulang model',
+} satisfies Record<keyof typeof zh, string>

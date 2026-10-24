@@ -1,5 +1,6 @@
 /** Browser-safe settings surface. Keep Node-backed transports out of renderer bundles. */
 export type {
+  AiOllamaServer,
   AiCustomEndpoint,
   AiProviderConfig,
   AiProviderId,
@@ -23,6 +24,7 @@ export type {
   AiUsageWindow,
   AiVideoAnalysisProviderSelection,
 } from './types'
+export { ollamaBaseUrl } from './ollama-servers'
 export {
   AI_SUBSCRIPTION_PROVIDERS,
   isKeyProviderConfigured,

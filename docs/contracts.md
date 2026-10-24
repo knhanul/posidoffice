@@ -260,11 +260,14 @@ metadata:
 | `headlessSubscriptionConsentVersion` | 자동 호출 스위치를 켤 때 동의한 경고의 판(정수)  | 없음                                                       |
 | `subscriptionNoticeSeen`             | 참/거짓. 첫 연결 안내를 봤는지                   | 거짓                                                       |
 | `customEndpoints`, `customEndpoint`  | 직접 운영하는 서버 목록과 지금 쓰는 것의 식별자  | 없음                                                       |
+| `ollamaServers`                      | Ollama 서버 정보와 등록 모델 식별자 목록         | 없음                                                       |
 | `maxOutputTokens`                    | 모델 한 차례의 출력 상한                         | 코드의 기본값                                              |
 | `media`, `search`                    | 이미지·분석·검색 제공자 선택과 그 키             | 이미지 분석은 `chat`, 영상 분석은 `none`, 검색은 무료 경로 |
 | `readUrl`                            | `{ githubToken }`                                | 없음                                                       |
 
 - `readUrl.githubToken`은 비공개 GitHub 파일을 읽는 읽기 토큰이다. 설정 파일에 평문으로 저장되고(AI 키와 같다), `api.github.com` 요청에만 실린다. 다른 사이트나 리다이렉트 홉에는 보내지 않는다.
+- `ollamaServers`는 모델을 아직 등록하지 않은 서버도 보관한다. 등록 모델은 기존 `customEndpoints`에 저장하고 `endpointIds`로 서버와 연결한다. 서버 이름·주소·키를 저장하면 연결된 모델에도 반영하며, 기존 Custom 연결은 자동으로 Ollama 서버로 분류하지 않는다. 서버는 최대 100개다. API 키의 저장 방식은 기존 제공자 키와 같다.
+- 서버 항목은 `{ id, name, baseUrl, apiKey, endpointIds }`다. `ollamaServers`가 없으면 Ollama 탭에 `http://localhost:11434/v1`의 로컬 서버를 기본 표시한다. 서버나 모델을 변경할 때 함께 저장하며, 빈 배열은 사용자가 모두 삭제한 것으로 보고 기본 서버를 다시 만들지 않는다.
 - `headlessSubscriptionEnabled`가 참이어도 `headlessSubscriptionConsentVersion`이 지금 경고의 판(2)보다 작거나 없으면 꺼진 것으로 읽는다. 판 1은 시간당 한도가 있던 예전 경고이고, 그때는 판을 저장하지 않았다.
 - 이미지 생성 제공자의 저장값 기본은 `codex`다. Codex 구독 이미지 생성이 들어 있지 않은 지금은 `none`(선택 없음)과 똑같이 동작한다.
 - 구독 제공자의 식별자는 `claude-code`, `codex`다. 인증 방식은 `claude-subscription`, `codex-chatgpt`, `api-key` 셋이다.

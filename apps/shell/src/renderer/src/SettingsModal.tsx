@@ -43,6 +43,8 @@ import type { AiCatalogEntry, DocTheme, UiTheme } from '../../shared/home-api'
 import { ProviderLogo } from './provider-logos'
 import { IntegrationsPane, skillUpdateDue } from './IntegrationsPane'
 import { AiSection, SubscriptionSummary } from './SettingsAiSection'
+import { OllamaPane } from './OllamaPane'
+import { ollamaText } from './i18n/strings-ollama'
 import { QuickLookField } from './SettingsQuickLook'
 import { ResultStoreField } from './SettingsResultStore'
 import { useSubscriptionConnection } from './subscription-client'
@@ -171,7 +173,7 @@ function CustomFontSizeInput({
 }
 
 export type SectionId =
-  'account' | 'aiModel' | 'aiMedia' | 'skills' | 'general' | 'integrations' | 'about'
+  'account' | 'aiModel' | 'ollama' | 'aiMedia' | 'skills' | 'general' | 'integrations' | 'about'
 
 /** a section labelled from the home dictionary, or by a feature's own dictionary */
 type SectionEntry = { id: SectionId } & (
@@ -182,6 +184,7 @@ const SECTIONS: readonly SectionEntry[] = [
   { id: 'account', labelKey: 'setSecAccount' },
   // one AI entry: 'aiMedia' stays a valid target and opens it on the Advanced media area
   { id: 'aiModel', labelKey: 'setSecAi' },
+  { id: 'ollama', label: (lang) => ollamaText(lang, 'title') },
   { id: 'skills', label: (lang) => skillsText(lang, 'navLabel') },
   { id: 'general', labelKey: 'setSecGeneral' },
   { id: 'integrations', labelKey: 'setSecIntegrations' },
@@ -189,6 +192,15 @@ const SECTIONS: readonly SectionEntry[] = [
 ]
 
 function SectionIcon({ id }: { id: SectionId }) {
+  if (id === 'ollama') {
+    return (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <rect x="2" y="2" width="12" height="5" rx="1" stroke="currentColor" />
+        <rect x="2" y="9" width="12" height="5" rx="1" stroke="currentColor" />
+        <path d="M4 4.5h2M4 11.5h2" stroke="currentColor" />
+      </svg>
+    )
+  }
   if (id === 'aiModel') {
     return (
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -1674,6 +1686,7 @@ export function SettingsModal({
                 }
               />
             )}
+            {section === 'ollama' && <OllamaPane />}
             {section === 'general' && (
               <>
                 <h3 className="set-pane-title">{t('setSecGeneral')}</h3>

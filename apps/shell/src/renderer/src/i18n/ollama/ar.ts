@@ -1,0 +1,27 @@
+import type { zh } from './zh'
+export const ar = {
+  title: 'Ollama',
+  localServer: 'Ollama المحلي',
+  description:
+    'أضف خوادم وسجّل نماذج، ثم اختر نموذجًا في إعدادات الذكاء الاصطناعي أو في المستند. يتطلب تحرير المستندات نموذجًا يدعم استدعاء الأدوات.',
+  addServer: 'إضافة خادم',
+  empty: 'لم تُضف أي خوادم بعد.',
+  serverName: 'اسم الخادم',
+  editServer: 'تعديل الخادم',
+  installed: 'النماذج المثبتة',
+  registered: 'النماذج المسجلة',
+  register: 'تسجيل',
+  registeredBadge: 'مسجل',
+  noModels: 'لا توجد نماذج مثبتة على هذا الخادم.',
+  noRegistered: 'سجّل نموذجًا من قائمة النماذج المثبتة.',
+  apiKeyOptional: 'مفتاح API (اختياري)',
+  invalidUrl: 'أدخل عنوان HTTP أو HTTPS صالحًا بدون اسم مستخدم أو كلمة مرور.',
+  loadFailed: 'تعذرت قراءة الإعدادات. حاول مجددًا.',
+  saveFailed: 'تعذر حفظ التغييرات. حاول مجددًا.',
+  connectFailed: 'تعذر جلب النماذج. تحقق من الخادم والعنوان ومفتاح API.',
+  removeConfirm:
+    'هل تريد إزالة هذا الخادم ونماذجه المسجلة من القائمة؟ ستبقى ملفات النماذج على الخادم.',
+  loading: 'جارٍ قراءة الإعدادات…',
+  retry: 'إعادة المحاولة',
+  refresh: 'اختبار الاتصال وتحديث النماذج',
+} satisfies Record<keyof typeof zh, string>

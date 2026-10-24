@@ -145,6 +145,17 @@ export interface AiCustomEndpoint {
 export interface CodexModelCatalog {
   models: string[]
   defaultModel: string
+  /** Custom servers: a valid /models response, including an empty catalogue. */
+  reachable?: boolean | undefined
+}
+
+/** Server metadata; only registered models enter the custom endpoint picker. */
+export interface AiOllamaServer {
+  id: string
+  name: string
+  baseUrl: string
+  apiKey: string
+  endpointIds: string[]
 }
 
 export interface AiProviderMeta {
@@ -257,6 +268,8 @@ export interface AiSettings {
   customEndpoints?: AiCustomEndpoint[] | undefined
   /** id of the endpoint `providers.custom` mirrors */
   customEndpoint?: string | undefined
+  /** Ollama servers, including servers with no registered models. */
+  ollamaServers?: AiOllamaServer[] | undefined
   /** Provider for generate_image / analyze_media. Absent (pre-media settings files) means the defaults. */
   media?: AiMediaSettings | undefined
   /** web/image search backend; absent means the keyless free chain */

@@ -1,0 +1,27 @@
+import type { zh } from './zh'
+export const cs = {
+  title: 'Ollama',
+  localServer: 'Místní Ollama',
+  description:
+    'Přidejte servery a zaregistrujte modely. Poté vyberte model v nastavení AI nebo v dokumentu. Úprava dokumentů vyžaduje model s podporou volání nástrojů.',
+  addServer: 'Přidat server',
+  empty: 'Zatím nejsou přidány žádné servery.',
+  serverName: 'Název serveru',
+  editServer: 'Upravit server',
+  installed: 'Nainstalované modely',
+  registered: 'Registrované modely',
+  register: 'Zaregistrovat',
+  registeredBadge: 'Registrováno',
+  noModels: 'Na tomto serveru nejsou nainstalovány žádné modely.',
+  noRegistered: 'Zaregistrujte model ze seznamu nainstalovaných modelů.',
+  apiKeyOptional: 'Klíč API (nepovinný)',
+  invalidUrl: 'Zadejte platnou adresu HTTP nebo HTTPS bez uživatelského jména a hesla.',
+  loadFailed: 'Nastavení se nepodařilo načíst. Zkuste to znovu.',
+  saveFailed: 'Změny se nepodařilo uložit. Zkuste to znovu.',
+  connectFailed: 'Modely se nepodařilo načíst. Zkontrolujte server, adresu a klíč API.',
+  removeConfirm:
+    'Odebrat tento server a jeho registrované modely ze seznamu? Soubory modelů na serveru zůstanou zachovány.',
+  loading: 'Načítání nastavení…',
+  retry: 'Zkusit znovu',
+  refresh: 'Otestovat připojení a obnovit modely',
+} satisfies Record<keyof typeof zh, string>

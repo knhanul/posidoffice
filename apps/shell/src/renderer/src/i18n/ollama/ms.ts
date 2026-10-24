@@ -1,0 +1,27 @@
+import type { zh } from './zh'
+export const ms = {
+  title: 'Ollama',
+  localServer: 'Ollama setempat',
+  description:
+    'Tambah pelayan dan daftarkan model, kemudian pilih dalam tetapan AI atau pemilih model dokumen. Penyuntingan dokumen memerlukan model yang menyokong panggilan alat.',
+  addServer: 'Tambah pelayan',
+  empty: 'Belum ada pelayan didaftarkan.',
+  serverName: 'Nama pelayan',
+  editServer: 'Sunting pelayan',
+  installed: 'Model dipasang',
+  registered: 'Model berdaftar',
+  register: 'Daftar',
+  registeredBadge: 'Berdaftar',
+  noModels: 'Tiada model dipasang pada pelayan ini.',
+  noRegistered: 'Daftarkan model daripada senarai model yang dipasang.',
+  apiKeyOptional: 'Kunci API (pilihan)',
+  invalidUrl: 'Masukkan alamat HTTP atau HTTPS yang sah tanpa nama pengguna atau kata laluan.',
+  loadFailed: 'Tetapan tidak dapat dibaca. Cuba lagi.',
+  saveFailed: 'Perubahan tidak dapat disimpan. Cuba lagi.',
+  connectFailed: 'Model tidak dapat diperoleh. Semak pelayan, alamat dan kunci API.',
+  removeConfirm:
+    'Alih keluar pelayan ini dan model berdaftarnya daripada senarai? Fail model pada pelayan akan kekal.',
+  loading: 'Membaca tetapan…',
+  retry: 'Cuba lagi',
+  refresh: 'Uji sambungan dan segar semula model',
+} satisfies Record<keyof typeof zh, string>

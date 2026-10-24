@@ -1,0 +1,27 @@
+import type { zh } from './zh'
+export const pl = {
+  title: 'Ollama',
+  localServer: 'Lokalny Ollama',
+  description:
+    'Dodaj serwery i zarejestruj modele, a potem wybierz model w ustawieniach AI lub w dokumencie. Edycja dokumentów wymaga modelu obsługującego wywołania narzędzi.',
+  addServer: 'Dodaj serwer',
+  empty: 'Nie dodano jeszcze serwerów.',
+  serverName: 'Nazwa serwera',
+  editServer: 'Edytuj serwer',
+  installed: 'Zainstalowane modele',
+  registered: 'Zarejestrowane modele',
+  register: 'Zarejestruj',
+  registeredBadge: 'Zarejestrowany',
+  noModels: 'Na tym serwerze nie ma zainstalowanych modeli.',
+  noRegistered: 'Zarejestruj model z listy zainstalowanych modeli.',
+  apiKeyOptional: 'Klucz API (opcjonalnie)',
+  invalidUrl: 'Podaj prawidłowy adres HTTP lub HTTPS bez nazwy użytkownika i hasła.',
+  loadFailed: 'Nie udało się odczytać ustawień. Spróbuj ponownie.',
+  saveFailed: 'Nie udało się zapisać zmian. Spróbuj ponownie.',
+  connectFailed: 'Nie udało się pobrać modeli. Sprawdź serwer, adres i klucz API.',
+  removeConfirm:
+    'Usunąć ten serwer i jego zarejestrowane modele z listy? Pliki modeli na serwerze pozostaną.',
+  loading: 'Odczytywanie ustawień…',
+  retry: 'Spróbuj ponownie',
+  refresh: 'Testuj połączenie i odśwież modele',
+} satisfies Record<keyof typeof zh, string>

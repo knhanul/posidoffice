@@ -9,6 +9,8 @@ import {
 } from '../src/custom-endpoints'
 import { sanitizeAiSettings } from '../src/ai-settings-guard'
 import { defaultAiSettings, resolveAiSettings } from '../src/providers'
+import { normalizeAiSettings } from '../src/legacy-settings'
+import { normalizeOllamaServers, ollamaBaseUrl } from '../src/ollama-servers'
 import type { AiCustomEndpoint } from '../src/types'
 
 const ollama: AiCustomEndpoint = {
@@ -26,6 +28,57 @@ const gateway: AiCustomEndpoint = {
   model: 'gpt-x',
   models: ['gpt-x', 'gpt-y'],
 }
+
+describe('Ollama server persistence', () => {
+  const server = {
+    id: 'local',
+    name: 'Local',
+    baseUrl: ollama.baseUrl,
+    apiKey: '',
+    endpointIds: ['a'],
+  }
+
+  it('round-trips servers with and without models through IPC and file normalization', () => {
+    const settings = {
+      ...defaultAiSettings(),
+      customEndpoints: [ollama, gateway],
+      customEndpoint: gateway.id,
+      ollamaServers: [server, { ...server, id: 'empty', endpointIds: [] }],
+    }
+    const saved = sanitizeAiSettings(settings)
+    const read = normalizeAiSettings(JSON.parse(JSON.stringify(saved)))
+    expect(read.ollamaServers).toEqual(settings.ollamaServers)
+    expect(read.customEndpoints).toEqual(settings.customEndpoints)
+    expect(read.customEndpoint).toBe('b')
+    expect(read.providers.custom.baseUrl).toBe(gateway.baseUrl)
+    const removed = normalizeAiSettings(sanitizeAiSettings({ ...read, ollamaServers: [] }))
+    expect(removed.ollamaServers).toEqual([])
+  })
+
+  it('rejects malformed metadata and prevents duplicate server or endpoint ownership', () => {
+    const raw = [
+      null,
+      [],
+      123,
+      {},
+      { ...server, baseUrl: 'file:///secret' },
+      { ...server, baseUrl: 'http://user:password@localhost/v1' },
+      server,
+      { ...server, name: 'duplicate' },
+      { ...server, id: 'second', endpointIds: ['a', 'b', 'b', null] },
+    ]
+    const expected = [server, { ...server, id: 'second', endpointIds: ['b'] }]
+    expect(normalizeOllamaServers(raw)).toEqual(expected)
+    expect(
+      sanitizeAiSettings({ ...defaultAiSettings(), ollamaServers: raw })?.ollamaServers,
+    ).toEqual(expected)
+    expect(normalizeAiSettings({ providers: {}, ollamaServers: raw }).ollamaServers).toEqual(
+      expected,
+    )
+    expect(ollamaBaseUrl(' http://localhost:11434/v1/ ')).toBe(ollama.baseUrl)
+    expect(ollamaBaseUrl('javascript:alert(1)')).toBeUndefined()
+  })
+})
 
 describe('resolveCustomEndpoints', () => {
   it('seeds the list from a pre-list custom slot and mirrors it back', () => {

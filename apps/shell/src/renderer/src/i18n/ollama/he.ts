@@ -1,0 +1,26 @@
+import type { zh } from './zh'
+export const he = {
+  title: 'Ollama',
+  localServer: 'Ollama מקומי',
+  description:
+    'הוסיפו שרתים ורשמו מודלים, ואז בחרו מודל בהגדרות AI או במסמך. עריכת מסמכים דורשת מודל שתומך בקריאות לכלים.',
+  addServer: 'הוספת שרת',
+  empty: 'עדיין לא נוספו שרתים.',
+  serverName: 'שם השרת',
+  editServer: 'עריכת שרת',
+  installed: 'מודלים מותקנים',
+  registered: 'מודלים רשומים',
+  register: 'רישום',
+  registeredBadge: 'רשום',
+  noModels: 'אין מודלים מותקנים בשרת זה.',
+  noRegistered: 'רשמו מודל מרשימת המודלים המותקנים.',
+  apiKeyOptional: 'מפתח API (רשות)',
+  invalidUrl: 'הזינו כתובת HTTP או HTTPS תקינה ללא שם משתמש או סיסמה.',
+  loadFailed: 'לא ניתן לקרוא את ההגדרות. נסו שוב.',
+  saveFailed: 'לא ניתן לשמור את השינויים. נסו שוב.',
+  connectFailed: 'לא ניתן לקבל את המודלים. בדקו את השרת, הכתובת ומפתח ה-API.',
+  removeConfirm: 'להסיר שרת זה ואת המודלים הרשומים שלו מהרשימה? קובצי המודלים בשרת יישארו.',
+  loading: 'קריאת הגדרות…',
+  retry: 'ניסיון נוסף',
+  refresh: 'בדיקת חיבור ורענון מודלים',
+} satisfies Record<keyof typeof zh, string>

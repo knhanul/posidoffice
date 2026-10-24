@@ -12,6 +12,7 @@
  * web-search handler, filename sanitizing like the style-template handler).
  */
 import { statSync } from 'node:fs'
+import { normalizeOllamaServers } from './ollama-servers'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 
@@ -219,6 +220,9 @@ export function sanitizeAiSettings(input: unknown): AiSettings | null {
     settings.readUrl = { githubToken: readUrl.githubToken.slice(0, MAX_API_KEY_LENGTH) }
   }
   const customEndpoints = sanitizeCustomEndpoints(raw.customEndpoints)
+  if (Array.isArray(raw.ollamaServers)) {
+    settings.ollamaServers = normalizeOllamaServers(raw.ollamaServers)
+  }
   if (customEndpoints.length > 0) {
     settings.customEndpoints = customEndpoints
     if (typeof raw.customEndpoint === 'string') {

@@ -32,9 +32,9 @@ function emptyCatalog(): CodexModelCatalog {
  *
  * Never throws and never rejects: a refused, unreachable, slow, oversized,
  * non-JSON or unexpectedly shaped answer all return an empty catalogue, because
- * the only consumer is a settings screen deciding between a dropdown and a text
- * box. An endpoint that cannot answer must not break the field the user types
- * into, and must not make noise about it either.
+ * the settings screen must keep its text box usable when the server is offline.
+ * A valid response also carries `reachable: true`, so server management can
+ * distinguish an empty server from a failed probe.
  *
  * The key is sent as `Authorization: Bearer …` only when one is given — an empty
  * `Bearer ` is a malformed credential that strict servers reject, and local
@@ -78,7 +78,7 @@ export async function listCustomModels(
         if (trimmed) seen.add(trimmed)
         if (seen.size >= MAX_MODELS) break
       }
-      return { models: [...seen], defaultModel: '' }
+      return { models: [...seen], defaultModel: '', reachable: true }
     })
   } catch {
     return emptyCatalog()

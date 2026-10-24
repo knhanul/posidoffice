@@ -172,7 +172,9 @@ export {
   AI_CONNECT_TIMEOUT_MS,
   AI_IDLE_TIMEOUT_MS,
   AiTimeoutError,
+  connectTimeoutMsOf,
   createStreamWatchdog,
+  OLLAMA_CONNECT_TIMEOUT_MS,
 } from './watchdog'
 export type { StreamWatchdog } from './watchdog'
 export * from './user-skills'

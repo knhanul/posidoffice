@@ -28,4 +28,6 @@ export const ru = {
   effortMedium: 'Средний (Medium)',
   effortHigh: 'Высокий (High)',
   localLocked: 'Сервер Ollama, запущенный на этом компьютере, нельзя удалить.',
+  connectTimeout: 'Тайм-аут первого ответа (минуты)',
+  connectTimeoutHint: 'Увеличьте значение для серверов, долго загружающих модели.',
 } satisfies Record<keyof typeof zh, string>

@@ -4,6 +4,7 @@
 // learns about endpoints, and a settings file from before the list existed
 // still works because its single slot becomes the first entry.
 import type { AiCustomEndpoint, AiModelEffort, AiProviderConfig, AiSettings } from './types'
+import { connectTimeoutMsOf, OLLAMA_CONNECT_TIMEOUT_MS } from './watchdog'
 
 export const OLLAMA_EFFORT_PRESETS: Record<
   AiModelEffort,
@@ -57,6 +58,7 @@ function normalizeEndpoints(raw: unknown): AiCustomEndpoint[] {
     const effortRaw = e.effort
     const effort =
       effortRaw === 'low' || effortRaw === 'medium' || effortRaw === 'high' ? effortRaw : undefined
+    const connectTimeoutMs = connectTimeoutMsOf(e.connectTimeoutMs)
     out.push({
       id,
       name: str(e.name),
@@ -65,6 +67,7 @@ function normalizeEndpoints(raw: unknown): AiCustomEndpoint[] {
       model: str(e.model),
       ...(models && models.length > 0 ? { models } : {}),
       ...(effort ? { effort } : {}),
+      ...(connectTimeoutMs !== undefined ? { connectTimeoutMs } : {}),
     })
   }
   return out
@@ -96,6 +99,12 @@ export function resolveCustomEndpoints(settings: AiSettings): AiSettings {
   const active =
     endpoints.find((e) => e.id === str(settings.customEndpoint)) ??
     (endpoints[0] as AiCustomEndpoint)
+  // Ollama endpoints keep the longer connect timeout so a slow local model
+  // load does not trip the default; registered before the field existed, they
+  // fall back to the Ollama default through their owning server list.
+  const ollamaOwned = settings.ollamaServers?.some((s) => s.endpointIds.includes(active.id))
+  const connectTimeoutMs =
+    active.connectTimeoutMs ?? (ollamaOwned ? OLLAMA_CONNECT_TIMEOUT_MS : undefined)
   return {
     ...settings,
     customEndpoints: endpoints,
@@ -107,6 +116,7 @@ export function resolveCustomEndpoints(settings: AiSettings): AiSettings {
         model: active.model,
         baseUrl: active.baseUrl,
         ...(active.effort ? { effort: active.effort } : {}),
+        ...(connectTimeoutMs !== undefined ? { connectTimeoutMs } : {}),
       },
     },
   }

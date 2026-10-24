@@ -132,6 +132,8 @@ export interface AiProviderConfig {
   cliPath?: string | undefined
   /** optional reasoning/context effort preset (used by Ollama and OpenAI-compatible endpoints) */
   effort?: AiModelEffort | undefined
+  /** connect timeout until the first response byte; unset falls back to AI_CONNECT_TIMEOUT_MS */
+  connectTimeoutMs?: number | undefined
 }
 
 /** One user-hosted OpenAI-compatible server; the active one is mirrored into `providers.custom` */
@@ -144,6 +146,8 @@ export interface AiCustomEndpoint {
   /** ids the server advertised on the last `/models` probe, so the composer chip can list them offline */
   models?: string[] | undefined
   effort?: AiModelEffort | undefined
+  /** connect timeout until the first response byte; Ollama endpoints default to OLLAMA_CONNECT_TIMEOUT_MS */
+  connectTimeoutMs?: number | undefined
 }
 
 /** Live picker data returned by Codex app-server's model/list method. */
@@ -161,6 +165,8 @@ export interface AiOllamaServer {
   baseUrl: string
   apiKey: string
   endpointIds: string[]
+  /** connect timeout until the first response byte, copied to registered endpoints */
+  connectTimeoutMs?: number | undefined
 }
 
 export interface AiProviderMeta {

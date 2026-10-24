@@ -81,6 +81,7 @@ describe('Ollama models in the shared Custom catalogue', () => {
       baseUrl: server.baseUrl,
       apiKey: '',
       model: 'qwen',
+      connectTimeoutMs: 300_000,
     })
     expect(documentSelection.ollamaServers).toEqual(settings.ollamaServers)
   })
@@ -201,6 +202,7 @@ describe('Ollama settings pane', () => {
       baseUrl: server.baseUrl,
     })
     expect(stored.customEndpoints?.[0]?.name).toBe('Local Ollama / Qwen medium')
+    expect(stored.customEndpoints?.[0]?.connectTimeoutMs).toBe(300_000)
     const header = host.querySelector('article header')!
     expect(button('Delete', header).disabled).toBe(true)
     await click('Test connection')
@@ -235,12 +237,14 @@ describe('Ollama settings pane', () => {
     await type(0, 'Office')
     await type(1, other.baseUrl)
     await type(2, 'secret')
+    await type(3, '7')
     await click('Save')
     expect(pending[2]).toMatchObject({ url: other.baseUrl, key: 'secret' })
     expect(stored.customEndpoints![0]).toMatchObject({
       name: 'Office / Qwen medium',
       baseUrl: other.baseUrl,
       apiKey: 'secret',
+      connectTimeoutMs: 420_000,
     })
     await act(async () => {
       changed?.()

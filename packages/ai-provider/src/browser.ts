@@ -26,6 +26,7 @@ export type {
   AiVideoAnalysisProviderSelection,
 } from './types'
 export { isLocalOllamaUrl, ollamaBaseUrl } from './ollama-servers'
+export { OLLAMA_CONNECT_TIMEOUT_MS } from './watchdog'
 export {
   AI_SUBSCRIPTION_PROVIDERS,
   isKeyProviderConfigured,

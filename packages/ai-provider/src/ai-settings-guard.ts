@@ -18,6 +18,7 @@ import { join } from 'node:path'
 
 import { AI_SUBSCRIPTION_PROVIDERS, readUrlSettingsOf } from './providers'
 import { AI_PROVIDER_ADAPTERS, normalizeBaseUrl } from './registry'
+import { connectTimeoutMsOf } from './watchdog'
 import type {
   AiCustomEndpoint,
   AiProviderConfig,
@@ -98,6 +99,8 @@ function sanitizeProviderConfig(input: unknown): AiProviderConfig {
   if (effort === 'low' || effort === 'medium' || effort === 'high') {
     config.effort = effort
   }
+  const connectTimeoutMs = connectTimeoutMsOf(raw.connectTimeoutMs)
+  if (connectTimeoutMs !== undefined) config.connectTimeoutMs = connectTimeoutMs
   return config
 }
 
@@ -157,6 +160,9 @@ function sanitizeCustomEndpoints(raw: unknown): AiCustomEndpoint[] {
       model: config.model,
       ...(models && models.length > 0 ? { models } : {}),
       ...(effort === 'low' || effort === 'medium' || effort === 'high' ? { effort } : {}),
+      ...(config.connectTimeoutMs !== undefined
+        ? { connectTimeoutMs: config.connectTimeoutMs }
+        : {}),
     })
   }
   return out

@@ -27,4 +27,6 @@ export const he = {
   effortMedium: 'בינו니 (Medium)',
   effortHigh: 'גבוה (High)',
   localLocked: 'לא ניתן להסיר שרת Ollama שפועל במחשב זה.',
+  connectTimeout: 'זמן קצוב לתגובה ראשונה (דקות)',
+  connectTimeoutHint: 'הגדילו את הערך עבור שרתים שטוענים מודלים לאט.',
 } satisfies Record<keyof typeof zh, string>

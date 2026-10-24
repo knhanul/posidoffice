@@ -28,4 +28,6 @@ export const vi = {
   effortMedium: 'Trung bình (Medium)',
   effortHigh: 'Cao (High)',
   localLocked: 'Không thể xóa máy chủ Ollama đang chạy trên PC này.',
+  connectTimeout: 'Thời gian chờ phản hồi đầu tiên (phút)',
+  connectTimeoutHint: 'Tăng giá trị cho các máy chủ tải mô hình chậm.',
 } satisfies Record<keyof typeof zh, string>

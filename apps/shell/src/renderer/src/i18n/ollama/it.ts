@@ -28,4 +28,6 @@ export const it = {
   effortMedium: 'Medio (Medium)',
   effortHigh: 'Alto (High)',
   localLocked: 'Un server Ollama in esecuzione su questo PC non può essere rimosso.',
+  connectTimeout: 'Timeout della prima risposta (minuti)',
+  connectTimeoutHint: 'Aumentare il valore per i server che caricano i modelli lentamente.',
 } satisfies Record<keyof typeof zh, string>

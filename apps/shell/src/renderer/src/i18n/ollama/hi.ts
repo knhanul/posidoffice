@@ -28,4 +28,6 @@ export const hi = {
   effortMedium: 'मध्यम (Medium)',
   effortHigh: 'उच्च (High)',
   localLocked: 'इस PC पर चल रहे Ollama सर्वर को हटाया नहीं जा सकता.',
+  connectTimeout: 'पहली प्रतिक्रिया समयसीमा (मिनट)',
+  connectTimeoutHint: 'धीरे से मॉडल लोड करने वाले सर्वरों के लिए मान बढ़ाएँ.',
 } satisfies Record<keyof typeof zh, string>

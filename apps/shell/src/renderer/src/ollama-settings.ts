@@ -1,5 +1,6 @@
 import {
   newCustomEndpointId,
+  OLLAMA_CONNECT_TIMEOUT_MS,
   prettyModelName,
   removeCustomEndpoint,
   resolveCustomEndpoints,
@@ -17,6 +18,7 @@ export function defaultOllamaServer(name: string): AiOllamaServer {
     baseUrl: LOCAL_OLLAMA_URL,
     apiKey: '',
     endpointIds: [],
+    connectTimeoutMs: OLLAMA_CONNECT_TIMEOUT_MS,
   }
 }
 
@@ -47,6 +49,7 @@ export function saveOllamaServer(settings: AiSettings, server: AiOllamaServer): 
       ...endpoint,
       baseUrl: server.baseUrl,
       apiKey: server.apiKey,
+      connectTimeoutMs: server.connectTimeoutMs ?? OLLAMA_CONNECT_TIMEOUT_MS,
       name: endpoint.name === prevExpectedName ? newName : endpoint.name,
     })
   }
@@ -92,6 +95,7 @@ export function registerOllamaModel(
     model,
     models: [model],
     ...(effort ? { effort } : {}),
+    connectTimeoutMs: server.connectTimeoutMs ?? OLLAMA_CONNECT_TIMEOUT_MS,
   })
   // Adding to the catalogue must not switch an already selected Custom model.
   if (active) next = selectCustomEndpoint(next, active)

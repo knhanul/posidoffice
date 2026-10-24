@@ -225,6 +225,68 @@ describe('sanitizeAiSettings', () => {
   })
 })
 
+describe('connect timeout', () => {
+  const server = {
+    id: 'local',
+    name: 'Local',
+    baseUrl: ollama.baseUrl,
+    apiKey: '',
+    endpointIds: ['a'],
+  }
+
+  it('mirrors the endpoint timeout into the slot, with a 5-minute floor for Ollama-owned entries', () => {
+    const legacy = resolveCustomEndpoints({
+      ...defaultAiSettings(),
+      customEndpoints: [ollama],
+      customEndpoint: 'a',
+      ollamaServers: [server],
+    })
+    expect(legacy.providers.custom.connectTimeoutMs).toBe(300_000)
+
+    const timed = resolveCustomEndpoints({
+      ...defaultAiSettings(),
+      customEndpoints: [{ ...ollama, connectTimeoutMs: 120_000 }],
+      customEndpoint: 'a',
+      ollamaServers: [server],
+    })
+    expect(timed.providers.custom.connectTimeoutMs).toBe(120_000)
+
+    const plain = resolveCustomEndpoints({
+      ...defaultAiSettings(),
+      customEndpoints: [gateway],
+      customEndpoint: 'b',
+    })
+    expect(plain.providers.custom.connectTimeoutMs).toBeUndefined()
+  })
+
+  it('round-trips the timeout on endpoints and servers through the guard', () => {
+    const withTimeout = {
+      ...defaultAiSettings(),
+      customEndpoints: [{ ...ollama, connectTimeoutMs: 480_000 }, gateway],
+      customEndpoint: 'a',
+      ollamaServers: [{ ...server, connectTimeoutMs: 480_000 }],
+    }
+    const saved = sanitizeAiSettings(withTimeout)
+    expect(saved?.customEndpoints?.[0]?.connectTimeoutMs).toBe(480_000)
+    expect(saved?.customEndpoints?.[1]?.connectTimeoutMs).toBeUndefined()
+    expect(saved?.ollamaServers?.[0]?.connectTimeoutMs).toBe(480_000)
+    const read = normalizeAiSettings(JSON.parse(JSON.stringify(saved)))
+    expect(read.customEndpoints?.[0]?.connectTimeoutMs).toBe(480_000)
+    expect(read.ollamaServers?.[0]?.connectTimeoutMs).toBe(480_000)
+    expect(read.providers.custom.connectTimeoutMs).toBe(480_000)
+
+    const weird = sanitizeAiSettings({
+      ...withTimeout,
+      customEndpoints: [
+        { ...ollama, connectTimeoutMs: 'abc' },
+        { ...gateway, connectTimeoutMs: 9_000_000 },
+      ],
+    })
+    expect(weird?.customEndpoints?.[0]?.connectTimeoutMs).toBeUndefined()
+    expect(weird?.customEndpoints?.[1]?.connectTimeoutMs).toBe(600_000)
+  })
+})
+
 describe('prettyModelName and ollamaEndpointLabel', () => {
   it('formats raw model tags cleanly', () => {
     expect(prettyModelName('gemma-4-e4b-q4-0-it:latest')).toBe('Gemma 4 E4b')

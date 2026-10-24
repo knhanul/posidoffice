@@ -28,4 +28,6 @@ export const cs = {
   effortMedium: 'Střední (Medium)',
   effortHigh: 'Vysoký (High)',
   localLocked: 'Server Ollama běžící na tomto počítači nelze odebrat.',
+  connectTimeout: 'Časový limit první odpovědi (minuty)',
+  connectTimeoutHint: 'Zvyšte hodnotu u serverů, které dlouho načítají modely.',
 } satisfies Record<keyof typeof zh, string>

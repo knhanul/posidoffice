@@ -29,4 +29,6 @@ export const pt = {
   effortMedium: 'Médio (Medium)',
   effortHigh: 'Alto (High)',
   localLocked: 'Um servidor Ollama em execução neste PC não pode ser removido.',
+  connectTimeout: 'Tempo limite da primeira resposta (minutos)',
+  connectTimeoutHint: 'Aumente o valor em servidores que demoram a carregar os modelos.',
 } satisfies Record<keyof typeof zh, string>

@@ -28,4 +28,6 @@ export const th = {
   effortMedium: 'ปานกลาง (Medium)',
   effortHigh: 'สูง (High)',
   localLocked: 'ไม่สามารถลบเซิร์ฟเวอร์ Ollama ที่กำลังทำงานบนพีซีเครื่องนี้ได้',
+  connectTimeout: 'เวลารอการตอบกลับครั้งแรก (นาที)',
+  connectTimeoutHint: 'เพิ่มค่าสำหรับเซิร์ฟเวอร์ที่โหลดโมเดลช้า',
 } satisfies Record<keyof typeof zh, string>

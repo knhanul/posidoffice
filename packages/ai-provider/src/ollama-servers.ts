@@ -1,4 +1,5 @@
 import type { AiOllamaServer } from './types'
+import { connectTimeoutMsOf } from './watchdog'
 
 /** Browser-safe validation shared by the settings form, file reader and IPC guard. */
 export function ollamaBaseUrl(value: string): string | undefined {
@@ -55,12 +56,14 @@ export function normalizeOllamaServers(raw: unknown): AiOllamaServer[] {
       endpoints.add(endpointId)
       endpointIds.push(endpointId)
     }
+    const connectTimeoutMs = connectTimeoutMsOf(e.connectTimeoutMs)
     servers.push({
       id,
       name: text(e.name, 128),
       baseUrl,
       apiKey: text(e.apiKey, 8192),
       endpointIds,
+      ...(connectTimeoutMs !== undefined ? { connectTimeoutMs } : {}),
     })
   }
   return servers

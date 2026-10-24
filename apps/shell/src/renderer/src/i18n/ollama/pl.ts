@@ -28,4 +28,6 @@ export const pl = {
   effortMedium: 'Średni (Medium)',
   effortHigh: 'Wysoki (High)',
   localLocked: 'Serwera Ollama uruchomionego na tym komputerze nie można usunąć.',
+  connectTimeout: 'Limit czasu pierwszej odpowiedzi (minuty)',
+  connectTimeoutHint: 'Zwiększ wartość dla serwerów, które długo ładują modele.',
 } satisfies Record<keyof typeof zh, string>

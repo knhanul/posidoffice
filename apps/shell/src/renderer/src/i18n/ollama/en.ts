@@ -28,4 +28,6 @@ export const en = {
   effortMedium: 'Medium',
   effortHigh: 'High',
   localLocked: 'An Ollama server running on this PC cannot be removed.',
+  connectTimeout: 'First response timeout (minutes)',
+  connectTimeoutHint: 'Raise this for servers that take a while to load models.',
 } satisfies Record<keyof typeof zh, string>

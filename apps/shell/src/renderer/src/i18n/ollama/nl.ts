@@ -29,4 +29,6 @@ export const nl = {
   effortMedium: 'Gemiddeld (Medium)',
   effortHigh: 'Hoog (High)',
   localLocked: 'Een Ollama-server die op deze pc draait, kan niet worden verwijderd.',
+  connectTimeout: 'Time-out eerste reactie (minuten)',
+  connectTimeoutHint: 'Verhoog de waarde voor servers die modellen traag laden.',
 } satisfies Record<keyof typeof zh, string>

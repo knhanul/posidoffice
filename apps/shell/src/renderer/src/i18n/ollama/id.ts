@@ -28,4 +28,6 @@ export const id = {
   effortMedium: 'Sedang (Medium)',
   effortHigh: 'Tinggi (High)',
   localLocked: 'Server Ollama yang berjalan di PC ini tidak dapat dihapus.',
+  connectTimeout: 'Batas waktu respons pertama (menit)',
+  connectTimeoutHint: 'Naikkan nilai untuk server yang lambat memuat model.',
 } satisfies Record<keyof typeof zh, string>

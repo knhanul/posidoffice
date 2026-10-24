@@ -28,4 +28,6 @@ export const ms = {
   effortMedium: 'Sederhana (Medium)',
   effortHigh: 'Tinggi (High)',
   localLocked: 'Pelayan Ollama yang berjalan pada PC ini tidak boleh dipadamkan.',
+  connectTimeout: 'Had masa respons pertama (minit)',
+  connectTimeoutHint: 'Naikkan nilai untuk pelayan yang lambat memuatkan model.',
 } satisfies Record<keyof typeof zh, string>

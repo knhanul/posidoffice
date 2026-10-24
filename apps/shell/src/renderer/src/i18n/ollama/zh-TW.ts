@@ -27,4 +27,6 @@ export const zhTW = {
   effortMedium: '中 (Medium)',
   effortHigh: '高 (High)',
   localLocked: '本機執行中的 Ollama 無法刪除。',
+  connectTimeout: '首次回應逾時（分鐘）',
+  connectTimeoutHint: '載入模型較慢的伺服器可調大此值。',
 } satisfies Record<keyof typeof zh, string>

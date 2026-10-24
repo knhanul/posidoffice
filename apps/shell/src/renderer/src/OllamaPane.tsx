@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import {
   isLocalOllamaUrl,
   newCustomEndpointId,
+  OLLAMA_CONNECT_TIMEOUT_MS,
   ollamaBaseUrl,
   prettyModelName,
 } from '@genoffice/ai-provider/browser'
@@ -38,7 +39,11 @@ function ServerForm({
   const [name, setName] = useState(server?.name ?? '')
   const [baseUrl, setBaseUrl] = useState(server?.baseUrl ?? LOCAL_OLLAMA_URL)
   const [apiKey, setApiKey] = useState(server?.apiKey ?? '')
+  const [timeoutMin, setTimeoutMin] = useState(
+    String(Math.round((server?.connectTimeoutMs ?? OLLAMA_CONNECT_TIMEOUT_MS) / 60_000)),
+  )
   const normalized = ollamaBaseUrl(baseUrl)
+  const timeoutMinutes = Math.min(10, Math.max(1, Math.round(Number(timeoutMin) || 5)))
   return (
     <form
       className="ollama-form"
@@ -51,6 +56,7 @@ function ServerForm({
           baseUrl: normalized,
           apiKey: apiKey.trim(),
           endpointIds: server?.endpointIds ?? [],
+          connectTimeoutMs: timeoutMinutes * 60_000,
         })
       }}
     >
@@ -98,6 +104,20 @@ function ServerForm({
           </label>
           <p className="set-field-desc">{common('setAiKeyHint')}</p>
         </details>
+        <label className="set-field">
+          <span className="set-field-label">{t('connectTimeout')}</span>
+          <input
+            type="number"
+            className="set-input"
+            required
+            min={1}
+            max={10}
+            step={1}
+            value={timeoutMin}
+            onChange={(event) => setTimeoutMin(event.target.value)}
+          />
+        </label>
+        <p className="set-field-desc">{t('connectTimeoutHint')}</p>
         <div className="set-btn-row">
           <button type="button" className="set-btn" onClick={onCancel}>
             {common('cancel')}
@@ -129,6 +149,7 @@ function ServerCard({
   const [editing, setEditing] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [refresh, setRefresh] = useState(0)
+  const [timeoutDraft, setTimeoutDraft] = useState<string | null>(null)
   const [selectedEfforts, setSelectedEfforts] = useState<Record<string, AiModelEffort[]>>({})
   const [catalog, setCatalog] = useState<{
     baseUrl: string
@@ -162,6 +183,21 @@ function ServerCard({
     catalog?.baseUrl === server.baseUrl && catalog.apiKey === server.apiKey ? catalog : null
   const status = current?.status ?? 'loading'
   const locked = status === 'ok' && isLocalOllamaUrl(server.baseUrl)
+  const timeoutMs = server.connectTimeoutMs ?? OLLAMA_CONNECT_TIMEOUT_MS
+  const commitTimeout = () => {
+    const draft = timeoutDraft
+    setTimeoutDraft(null)
+    if (draft === null) return
+    const minutes = Math.round(Number(draft))
+    if (!Number.isFinite(minutes) || minutes < 1 || minutes > 10) return
+    const ms = minutes * 60_000
+    if (ms === timeoutMs) return
+    void change((latest) => {
+      // A server removed in another window must not be recreated by a stale card.
+      if (!latest.ollamaServers?.some((s) => s.id === server.id)) return latest
+      return saveOllamaServer(latest, { ...server, connectTimeoutMs: ms })
+    })
+  }
   const endpoints = (settings.customEndpoints ?? []).filter((e) =>
     server.endpointIds.includes(e.id),
   )
@@ -190,6 +226,22 @@ function ServerCard({
             {server.name}
           </button>
           <div className="ollama-url">{server.baseUrl}</div>
+          <label className="ollama-timeout" title={t('connectTimeoutHint')}>
+            <span>{t('connectTimeout')}</span>
+            <input
+              type="number"
+              min={1}
+              max={10}
+              step={1}
+              disabled={busy}
+              value={timeoutDraft ?? String(Math.round(timeoutMs / 60_000))}
+              onChange={(event) => setTimeoutDraft(event.target.value)}
+              onBlur={commitTimeout}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') event.currentTarget.blur()
+              }}
+            />
+          </label>
         </div>
         <div className="set-btn-row">
           <button

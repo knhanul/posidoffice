@@ -26,4 +26,6 @@ export const zh = {
   effortMedium: '中 (Medium)',
   effortHigh: '高 (High)',
   localLocked: '本机运行的 Ollama 不能删除。',
+  connectTimeout: '首次响应超时（分钟）',
+  connectTimeoutHint: '加载模型较慢的服务器可调大此值。',
 }

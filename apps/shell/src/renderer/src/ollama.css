@@ -143,6 +143,78 @@
   border-bottom: 1px solid var(--border-subtle);
 }
 
+.ollama-models li.ollama-model-row {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.ollama-model-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.ollama-model-title,
+.ollama-registered-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.ollama-model-raw {
+  font-size: 11px;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.ollama-model-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ollama-effort-options {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+}
+
+.ollama-effort-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  user-select: none;
+  color: var(--text-primary);
+}
+
+.ollama-effort-label input[type='checkbox'] {
+  cursor: pointer;
+  margin: 0;
+}
+
+.ollama-effort-label.registered {
+  cursor: default;
+  color: var(--text-secondary);
+  opacity: 0.7;
+}
+
+.ollama-models li.ollama-registered-row {
+  justify-content: space-between;
+}
+
+.ollama-registered-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+
 .ollama-models li > span {
   flex: 1;
   min-width: 0;

@@ -24,4 +24,7 @@ export const id = {
   loading: 'Membaca pengaturan…',
   retry: 'Coba lagi',
   refresh: 'Uji koneksi dan muat ulang model',
+  effortLow: 'Rendah (Low)',
+  effortMedium: 'Sedang (Medium)',
+  effortHigh: 'Tinggi (High)',
 } satisfies Record<keyof typeof zh, string>

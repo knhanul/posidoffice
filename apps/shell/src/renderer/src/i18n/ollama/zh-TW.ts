@@ -23,4 +23,7 @@ export const zhTW = {
   loading: '正在讀取設定…',
   retry: '重試',
   refresh: '測試連線並重新整理模型清單',
+  effortLow: '低 (Low)',
+  effortMedium: '中 (Medium)',
+  effortHigh: '高 (High)',
 } satisfies Record<keyof typeof zh, string>

@@ -2,6 +2,7 @@
 export type {
   AiOllamaServer,
   AiCustomEndpoint,
+  AiModelEffort,
   AiProviderConfig,
   AiProviderId,
   AiProviderMeta,
@@ -87,9 +88,12 @@ export {
   headlessSubscriptionOn,
 } from './providers'
 export {
+  OLLAMA_EFFORT_PRESETS,
   activeCustomEndpoint,
   customEndpointLabel,
   newCustomEndpointId,
+  ollamaEndpointLabel,
+  prettyModelName,
   removeCustomEndpoint,
   resolveCustomEndpoints,
   selectCustomEndpoint,

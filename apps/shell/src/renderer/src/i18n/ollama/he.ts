@@ -23,4 +23,7 @@ export const he = {
   loading: 'קריאת הגדרות…',
   retry: 'ניסיון נוסף',
   refresh: 'בדיקת חיבור ורענון מודלים',
+  effortLow: 'נמוך (Low)',
+  effortMedium: 'בינו니 (Medium)',
+  effortHigh: 'גבוה (High)',
 } satisfies Record<keyof typeof zh, string>

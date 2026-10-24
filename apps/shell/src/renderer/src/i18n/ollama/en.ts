@@ -24,4 +24,7 @@ export const en = {
   loading: 'Reading settings…',
   retry: 'Try again',
   refresh: 'Test connection and refresh models',
+  effortLow: 'Low',
+  effortMedium: 'Medium',
+  effortHigh: 'High',
 } satisfies Record<keyof typeof zh, string>

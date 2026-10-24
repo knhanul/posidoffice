@@ -1,11 +1,12 @@
 import {
   newCustomEndpointId,
+  prettyModelName,
   removeCustomEndpoint,
   resolveCustomEndpoints,
   selectCustomEndpoint,
   upsertCustomEndpoint,
 } from '@genoffice/ai-provider/browser'
-import type { AiOllamaServer, AiSettings } from '@genoffice/ai-provider/browser'
+import type { AiModelEffort, AiOllamaServer, AiSettings } from '@genoffice/ai-provider/browser'
 
 /** An absent list is a first visit; an empty list means the user removed all servers. */
 export function withDefaultOllamaServer(settings: AiSettings, name: string): AiSettings {
@@ -30,14 +31,19 @@ export function saveOllamaServer(settings: AiSettings, server: AiOllamaServer): 
   const updated = { ...server, endpointIds: previous?.endpointIds ?? [] }
   for (const endpoint of next.customEndpoints ?? []) {
     if (!updated.endpointIds.includes(endpoint.id)) continue
+    const prevEffort = endpoint.effort
+    const pretty = prettyModelName(endpoint.model)
+    const prevExpectedName = prevEffort
+      ? `${previous?.name} / ${pretty} ${prevEffort}`.slice(0, 128)
+      : `${previous?.name} / ${endpoint.model}`.slice(0, 128)
+    const newName = prevEffort
+      ? `${server.name} / ${pretty} ${prevEffort}`.slice(0, 128)
+      : `${server.name} / ${endpoint.model}`.slice(0, 128)
     next = upsertCustomEndpoint(next, {
       ...endpoint,
       baseUrl: server.baseUrl,
       apiKey: server.apiKey,
-      name:
-        endpoint.name === `${previous?.name} / ${endpoint.model}`.slice(0, 128)
-          ? `${server.name} / ${endpoint.model}`.slice(0, 128)
-          : endpoint.name,
+      name: endpoint.name === prevExpectedName ? newName : endpoint.name,
     })
   }
   return {
@@ -52,21 +58,36 @@ export function registerOllamaModel(
   settings: AiSettings,
   serverId: string,
   model: string,
+  effort?: AiModelEffort,
 ): AiSettings {
   let next = resolveCustomEndpoints(settings)
   const server = next.ollamaServers?.find((s) => s.id === serverId)
   if (!server || !model.trim()) return settings
-  if (next.customEndpoints?.some((e) => server.endpointIds.includes(e.id) && e.model === model))
+  const targetEffort = effort ?? 'medium'
+  if (
+    next.customEndpoints?.some(
+      (e) =>
+        server.endpointIds.includes(e.id) &&
+        e.model === model &&
+        (e.effort ?? 'medium') === targetEffort,
+    )
+  ) {
     return settings
+  }
   const active = next.customEndpoint
   const id = newCustomEndpointId()
+  const pretty = prettyModelName(model)
+  const name = effort
+    ? `${server.name} / ${pretty} ${effort}`.slice(0, 128)
+    : `${server.name} / ${model}`.slice(0, 128)
   next = upsertCustomEndpoint(next, {
     id,
-    name: `${server.name} / ${model}`.slice(0, 128),
+    name,
     baseUrl: server.baseUrl,
     apiKey: server.apiKey,
     model,
     models: [model],
+    ...(effort ? { effort } : {}),
   })
   // Adding to the catalogue must not switch an already selected Custom model.
   if (active) next = selectCustomEndpoint(next, active)

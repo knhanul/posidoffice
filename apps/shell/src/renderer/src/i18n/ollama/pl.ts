@@ -24,4 +24,7 @@ export const pl = {
   loading: 'Odczytywanie ustawień…',
   retry: 'Spróbuj ponownie',
   refresh: 'Testuj połączenie i odśwież modele',
+  effortLow: 'Niski (Low)',
+  effortMedium: 'Średni (Medium)',
+  effortHigh: 'Wysoki (High)',
 } satisfies Record<keyof typeof zh, string>

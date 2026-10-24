@@ -24,4 +24,7 @@ export const ms = {
   loading: 'Membaca tetapan…',
   retry: 'Cuba lagi',
   refresh: 'Uji sambungan dan segar semula model',
+  effortLow: 'Rendah (Low)',
+  effortMedium: 'Sederhana (Medium)',
+  effortHigh: 'Tinggi (High)',
 } satisfies Record<keyof typeof zh, string>

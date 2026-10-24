@@ -25,4 +25,7 @@ export const de = {
   loading: 'Einstellungen werden gelesen…',
   retry: 'Erneut versuchen',
   refresh: 'Verbindung testen und Modelle aktualisieren',
+  effortLow: 'Niedrig (Low)',
+  effortMedium: 'Mittel (Medium)',
+  effortHigh: 'Hoch (High)',
 } satisfies Record<keyof typeof zh, string>

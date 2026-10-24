@@ -24,4 +24,7 @@ export const vi = {
   loading: 'Đang đọc cài đặt…',
   retry: 'Thử lại',
   refresh: 'Kiểm tra kết nối và làm mới mô hình',
+  effortLow: 'Thấp (Low)',
+  effortMedium: 'Trung bình (Medium)',
+  effortHigh: 'Cao (High)',
 } satisfies Record<keyof typeof zh, string>

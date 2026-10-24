@@ -24,4 +24,7 @@ export const th = {
   loading: 'กำลังอ่านการตั้งค่า…',
   retry: 'ลองอีกครั้ง',
   refresh: 'ทดสอบการเชื่อมต่อและรีเฟรชรายการโมเดล',
+  effortLow: 'ต่ำ (Low)',
+  effortMedium: 'ปานกลาง (Medium)',
+  effortHigh: 'สูง (High)',
 } satisfies Record<keyof typeof zh, string>

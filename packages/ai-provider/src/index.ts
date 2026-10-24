@@ -7,6 +7,7 @@ export type {
   AiMediaSettings,
   AiAnalysisProtocol,
   AiImageProtocol,
+  AiModelEffort,
   AiSearchProviderId,
   AiSearchProviderMeta,
   AiSearchSettings,
@@ -102,9 +103,12 @@ export {
   resolveAiSettings,
 } from './providers'
 export {
+  OLLAMA_EFFORT_PRESETS,
   activeCustomEndpoint,
   customEndpointLabel,
   newCustomEndpointId,
+  ollamaEndpointLabel,
+  prettyModelName,
   removeCustomEndpoint,
   resolveCustomEndpoints,
   selectCustomEndpoint,

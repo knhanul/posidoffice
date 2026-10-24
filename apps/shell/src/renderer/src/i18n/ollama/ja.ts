@@ -26,4 +26,7 @@ export const ja = {
   loading: '設定を読み込み中…',
   retry: '再試行',
   refresh: '接続テストとモデル一覧の更新',
+  effortLow: '低 (Low)',
+  effortMedium: '中 (Medium)',
+  effortHigh: '高 (High)',
 } satisfies Record<keyof typeof zh, string>

@@ -24,4 +24,7 @@ export const hi = {
   loading: 'सेटिंग पढ़ी जा रही हैं…',
   retry: 'फिर से कोशिश करें',
   refresh: 'कनेक्शन जाँचें और मॉडल सूची रीफ़्रेश करें',
+  effortLow: 'कम (Low)',
+  effortMedium: 'मध्यम (Medium)',
+  effortHigh: 'उच्च (High)',
 } satisfies Record<keyof typeof zh, string>

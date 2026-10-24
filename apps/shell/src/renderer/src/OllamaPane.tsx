@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { newCustomEndpointId, ollamaBaseUrl } from '@genoffice/ai-provider/browser'
-import type { AiOllamaServer, AiSettings } from '@genoffice/ai-provider/browser'
+import { newCustomEndpointId, ollamaBaseUrl, prettyModelName } from '@genoffice/ai-provider/browser'
+import type { AiModelEffort, AiOllamaServer, AiSettings } from '@genoffice/ai-provider/browser'
 import { useI18n } from './locale'
 import { ollamaText, type OllamaStringKey } from './i18n/strings-ollama'
 import { changeAiSettings, readAiSettings } from './settings-ai'
@@ -104,6 +104,8 @@ function ServerForm({
   )
 }
 
+const EFFORT_LEVELS: readonly AiModelEffort[] = ['low', 'medium', 'high']
+
 function ServerCard({
   server,
   settings,
@@ -120,6 +122,7 @@ function ServerCard({
   const [editing, setEditing] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [refresh, setRefresh] = useState(0)
+  const [selectedEfforts, setSelectedEfforts] = useState<Record<string, AiModelEffort[]>>({})
   const [catalog, setCatalog] = useState<{
     baseUrl: string
     apiKey: string
@@ -154,6 +157,18 @@ function ServerCard({
   const endpoints = (settings.customEndpoints ?? []).filter((e) =>
     server.endpointIds.includes(e.id),
   )
+
+  const toggleEffort = (model: string, level: AiModelEffort, registered: boolean) => {
+    if (registered) return
+    setSelectedEfforts((prev) => {
+      const currentList = prev[model] ?? ['medium']
+      const nextList = currentList.includes(level)
+        ? currentList.filter((l) => l !== level)
+        : [...currentList, level]
+      return { ...prev, [model]: nextList }
+    })
+  }
+
   return (
     <article className="ollama-card" aria-label={server.name}>
       <header className="ollama-card-header">
@@ -230,24 +245,68 @@ function ServerCard({
           {status === 'ok' && current?.models.length === 0 && <p>{t('noModels')}</p>}
           <ul className="ollama-models">
             {(current?.models ?? []).map((model) => {
-              const registered = endpoints.some((e) => e.model === model)
+              const modelEndpoints = endpoints.filter((e) => e.model === model)
+              const registeredEfforts = new Set(
+                modelEndpoints.map((e) => (e.effort ?? 'medium') as AiModelEffort),
+              )
+              const allRegistered = EFFORT_LEVELS.every((level) => registeredEfforts.has(level))
+              const currentSelected = selectedEfforts[model] ?? ['medium']
+              const toRegister = currentSelected.filter((level) => !registeredEfforts.has(level))
+              const isRegisteredState = allRegistered || toRegister.length === 0
+              const pretty = prettyModelName(model)
+
               return (
-                <li key={model}>
-                  <span>{model}</span>
-                  <button
-                    className="set-btn"
-                    disabled={busy || registered || model.length > 256}
-                    onClick={() =>
-                      void change((latest) => {
-                        const live = latest.ollamaServers?.find((s) => s.id === server.id)
-                        if (live?.baseUrl !== server.baseUrl || live.apiKey !== server.apiKey)
-                          return latest
-                        return registerOllamaModel(latest, server.id, model)
-                      })
-                    }
-                  >
-                    {t(registered ? 'registeredBadge' : 'register')}
-                  </button>
+                <li key={model} className="ollama-model-row">
+                  <div className="ollama-model-header">
+                    <span className="ollama-model-title">{pretty}</span>
+                    {pretty !== model && <span className="ollama-model-raw">{model}</span>}
+                  </div>
+                  <div className="ollama-model-actions">
+                    <div className="ollama-effort-options" role="group" aria-label={t('installed')}>
+                      {EFFORT_LEVELS.map((level) => {
+                        const isRegistered = registeredEfforts.has(level)
+                        const isChecked = isRegistered || currentSelected.includes(level)
+                        return (
+                          <label
+                            key={level}
+                            className={`ollama-effort-label${isRegistered ? ' registered' : ''}`}
+                          >
+                            <input
+                              type="checkbox"
+                              disabled={busy || isRegistered}
+                              checked={isChecked}
+                              onChange={() => toggleEffort(model, level, isRegistered)}
+                            />
+                            <span>
+                              {level === 'low'
+                                ? t('effortLow')
+                                : level === 'medium'
+                                  ? t('effortMedium')
+                                  : t('effortHigh')}
+                            </span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                    <button
+                      className="set-btn"
+                      disabled={busy || isRegisteredState || model.length > 256}
+                      onClick={() =>
+                        void change((latest) => {
+                          const live = latest.ollamaServers?.find((s) => s.id === server.id)
+                          if (live?.baseUrl !== server.baseUrl || live.apiKey !== server.apiKey)
+                            return latest
+                          let updated = latest
+                          for (const eff of toRegister) {
+                            updated = registerOllamaModel(updated, server.id, model, eff)
+                          }
+                          return updated
+                        })
+                      }
+                    >
+                      {t(isRegisteredState ? 'registeredBadge' : 'register')}
+                    </button>
+                  </div>
                 </li>
               )
             })}
@@ -257,20 +316,28 @@ function ServerCard({
           <h4>{t('registered')}</h4>
           {endpoints.length === 0 && <p>{t('noRegistered')}</p>}
           <ul className="ollama-models">
-            {endpoints.map((endpoint) => (
-              <li key={endpoint.id}>
-                <span>{endpoint.name || endpoint.model}</span>
-                <button
-                  className="set-btn"
-                  disabled={busy}
-                  onClick={() =>
-                    void change((latest) => unregisterOllamaModel(latest, server.id, endpoint.id))
-                  }
-                >
-                  {common('delete')}
-                </button>
-              </li>
-            ))}
+            {endpoints.map((endpoint) => {
+              const pretty = prettyModelName(endpoint.model)
+              const effort = endpoint.effort ?? 'medium'
+              const label = endpoint.name || `${pretty} ${effort}`
+              return (
+                <li key={endpoint.id} className="ollama-registered-row">
+                  <div className="ollama-registered-info">
+                    <span className="ollama-registered-title">{label}</span>
+                    <span className="ollama-model-raw">{endpoint.model}</span>
+                  </div>
+                  <button
+                    className="set-btn"
+                    disabled={busy}
+                    onClick={() =>
+                      void change((latest) => unregisterOllamaModel(latest, server.id, endpoint.id))
+                    }
+                  >
+                    {common('delete')}
+                  </button>
+                </li>
+              )
+            })}
           </ul>
         </section>
       </div>

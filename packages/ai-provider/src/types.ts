@@ -121,6 +121,8 @@ export interface AiSubscriptionUsage {
 /** Machine-readable cause of a failed run; one union shared with the renderer transport */
 export type AiRunErrorKind = IpcStreamErrorKind
 
+export type AiModelEffort = 'low' | 'medium' | 'high'
+
 export interface AiProviderConfig {
   apiKey: string
   model: string
@@ -128,6 +130,8 @@ export interface AiProviderConfig {
   baseUrl?: string | undefined
   /** optional Codex CLI override; empty means auto-detect the current authenticated install */
   cliPath?: string | undefined
+  /** optional reasoning/context effort preset (used by Ollama and OpenAI-compatible endpoints) */
+  effort?: AiModelEffort | undefined
 }
 
 /** One user-hosted OpenAI-compatible server; the active one is mirrored into `providers.custom` */
@@ -139,6 +143,7 @@ export interface AiCustomEndpoint {
   model: string
   /** ids the server advertised on the last `/models` probe, so the composer chip can list them offline */
   models?: string[] | undefined
+  effort?: AiModelEffort | undefined
 }
 
 /** Live picker data returned by Codex app-server's model/list method. */

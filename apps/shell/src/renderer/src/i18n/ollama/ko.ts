@@ -24,4 +24,7 @@ export const ko = {
   loading: '설정을 읽는 중…',
   retry: '다시 시도',
   refresh: '연결 테스트 및 모델 목록 새로고침',
+  effortLow: '낮음 (Low)',
+  effortMedium: '보통 (Medium)',
+  effortHigh: '높음 (High)',
 } satisfies Record<keyof typeof zh, string>

@@ -94,6 +94,10 @@ function sanitizeProviderConfig(input: unknown): AiProviderConfig {
   }
   const cliPath = sanitizeCliPath(raw.cliPath)
   if (cliPath !== undefined) config.cliPath = cliPath
+  const effort = raw.effort
+  if (effort === 'low' || effort === 'medium' || effort === 'high') {
+    config.effort = effort
+  }
   return config
 }
 
@@ -144,6 +148,7 @@ function sanitizeCustomEndpoints(raw: unknown): AiCustomEndpoint[] {
           .slice(0, MAX_ENDPOINT_MODELS)
           .map((m) => m.slice(0, MAX_MODEL_LENGTH))
       : undefined
+    const effort = e.effort
     out.push({
       id,
       name: String(e.name ?? '').slice(0, MAX_ENDPOINT_NAME_LENGTH),
@@ -151,6 +156,7 @@ function sanitizeCustomEndpoints(raw: unknown): AiCustomEndpoint[] {
       apiKey: config.apiKey,
       model: config.model,
       ...(models && models.length > 0 ? { models } : {}),
+      ...(effort === 'low' || effort === 'medium' || effort === 'high' ? { effort } : {}),
     })
   }
   return out

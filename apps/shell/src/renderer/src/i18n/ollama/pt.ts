@@ -25,4 +25,7 @@ export const pt = {
   loading: 'Lendo configurações…',
   retry: 'Tentar novamente',
   refresh: 'Testar conexão e atualizar modelos',
+  effortLow: 'Baixo (Low)',
+  effortMedium: 'Médio (Medium)',
+  effortHigh: 'Alto (High)',
 } satisfies Record<keyof typeof zh, string>

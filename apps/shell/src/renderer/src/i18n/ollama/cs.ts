@@ -24,4 +24,7 @@ export const cs = {
   loading: 'Načítání nastavení…',
   retry: 'Zkusit znovu',
   refresh: 'Otestovat připojení a obnovit modely',
+  effortLow: 'Nízký (Low)',
+  effortMedium: 'Střední (Medium)',
+  effortHigh: 'Vysoký (High)',
 } satisfies Record<keyof typeof zh, string>

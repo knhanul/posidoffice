@@ -63,11 +63,11 @@ describe('Ollama models in the shared Custom catalogue', () => {
     const choices = aiSelectionChoices(settings, statuses)
     expect(choices.map((c) => c.name)).toEqual([
       undefined,
-      'Existing',
       'Local / qwen',
       'LAN / qwen',
+      'Existing',
     ])
-    const selected = withAiSelection(settings, choices[3]!)
+    const selected = withAiSelection(settings, choices[2]!)
     expect(selected.providers.custom.baseUrl).toBe(other.baseUrl)
     const groups = aiProviderPickerGroups(settings, statuses)
     const local = groups.find((g) => g.label === 'Local / qwen')!
@@ -200,7 +200,7 @@ describe('Ollama settings pane', () => {
       id: 'ollama-local',
       baseUrl: server.baseUrl,
     })
-    expect(stored.customEndpoints?.[0]?.name).toBe('Local Ollama / qwen')
+    expect(stored.customEndpoints?.[0]?.name).toBe('Local Ollama / Qwen medium')
     await click('Delete', host.querySelector('article header')!)
     await click('Delete', host.querySelector('.ollama-confirm')!)
     await act(async () => {
@@ -225,7 +225,7 @@ describe('Ollama settings pane', () => {
     await click('Register')
     expect(button('Registered').disabled).toBe(true)
     expect(stored.provider).toBe('auto')
-    expect(stored.customEndpoints![0]!.name).toBe('Local / qwen')
+    expect(stored.customEndpoints![0]!.name).toBe('Local / Qwen medium')
     await click('Local')
     await type(0, 'Office')
     await type(1, other.baseUrl)
@@ -233,14 +233,14 @@ describe('Ollama settings pane', () => {
     await click('Save')
     expect(pending[1]).toMatchObject({ url: other.baseUrl, key: 'secret' })
     expect(stored.customEndpoints![0]).toMatchObject({
-      name: 'Office / qwen',
+      name: 'Office / Qwen medium',
       baseUrl: other.baseUrl,
       apiKey: 'secret',
     })
     await act(async () => {
       changed?.()
     })
-    expect(host.textContent).toContain('Office / qwen')
+    expect(host.textContent).toContain('Office / Qwen medium')
     await click('Delete', host.querySelectorAll('.ollama-model-columns section')[1]!)
     expect(stored.customEndpoints).toBeUndefined()
     await click('Delete', host.querySelector('article header')!)

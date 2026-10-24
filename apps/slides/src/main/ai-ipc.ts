@@ -163,10 +163,6 @@ export function registerAiIpc(): void {
     broadcastToWindows('ai:settings-changed')
   })
 
-  ipcMain.handle('ai:log-run-failure', (_event, entry: AiRunFailure) => {
-    appendRunFailure(entry)
-  })
-
   ipcMain.handle('ai:stream', async (event, request: AiStreamRequest) => {
     // per-request settings get the same schema check as the persisted ones: a
     // compromised renderer could otherwise hand cliPath/baseUrl straight to
@@ -255,6 +251,12 @@ export function registerAiIpc(): void {
 export function registerSlidesOnlyAiIpc(): void {
   // The design template remembered per document (slides:ai-template-selection-get / -set)
   registerTemplateSelectionIpc()
+
+  // Post-mortem log of a run with no usable reply. Only the slides panel sends it, so it lives
+  // here: docs-main's registerAiIpc (the one the shell runs) does not have this channel.
+  ipcMain.handle('ai:log-run-failure', (_event, entry: AiRunFailure) => {
+    appendRunFailure(entry)
+  })
 
   // What the search/image/media tools can do right now (settings + subscription connections):
   // the renderer offers the model only the tools that have a route.

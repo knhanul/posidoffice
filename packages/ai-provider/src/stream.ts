@@ -48,6 +48,7 @@ export async function streamForProvider(
           omitTemperature: endpoint.omitTemperature,
           useMaxCompletionTokens: endpoint.useMaxCompletionTokens,
           bodyExtras: endpoint.bodyExtras,
+          effort: config.effort ?? endpoint.effort,
         })
     }
   })

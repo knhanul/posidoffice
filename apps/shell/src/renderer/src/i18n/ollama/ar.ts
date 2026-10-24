@@ -24,4 +24,7 @@ export const ar = {
   loading: 'جارٍ قراءة الإعدادات…',
   retry: 'إعادة المحاولة',
   refresh: 'اختبار الاتصال وتحديث النماذج',
+  effortLow: 'منخفض (Low)',
+  effortMedium: 'متوسط (Medium)',
+  effortHigh: 'مرتفع (High)',
 } satisfies Record<keyof typeof zh, string>

@@ -25,4 +25,7 @@ export const nl = {
   loading: 'Instellingen lezen…',
   retry: 'Opnieuw proberen',
   refresh: 'Verbinding testen en modellen vernieuwen',
+  effortLow: 'Laag (Low)',
+  effortMedium: 'Gemiddeld (Medium)',
+  effortHigh: 'Hoog (High)',
 } satisfies Record<keyof typeof zh, string>

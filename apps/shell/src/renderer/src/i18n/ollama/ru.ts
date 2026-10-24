@@ -24,4 +24,7 @@ export const ru = {
   loading: 'Чтение настроек…',
   retry: 'Повторить',
   refresh: 'Проверить подключение и обновить модели',
+  effortLow: 'Низкий (Low)',
+  effortMedium: 'Средний (Medium)',
+  effortHigh: 'Высокий (High)',
 } satisfies Record<keyof typeof zh, string>

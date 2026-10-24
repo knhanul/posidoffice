@@ -1,12 +1,16 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   activeCustomEndpoint,
   customEndpointLabel,
+  ollamaEndpointLabel,
+  prettyModelName,
   removeCustomEndpoint,
   resolveCustomEndpoints,
   selectCustomEndpoint,
   upsertCustomEndpoint,
 } from '../src/custom-endpoints'
+import { streamOpenAiCompatible } from '../src/protocols/openai-compatible'
+import { okResponse, sseStream } from './test-utils'
 import { sanitizeAiSettings } from '../src/ai-settings-guard'
 import { defaultAiSettings, resolveAiSettings } from '../src/providers'
 import { normalizeAiSettings } from '../src/legacy-settings'
@@ -196,5 +200,112 @@ describe('sanitizeAiSettings', () => {
   it('omits the list when nothing survives', () => {
     const out = sanitizeAiSettings({ provider: 'custom', providers: {}, customEndpoints: 'nope' })
     expect(out?.customEndpoints).toBeUndefined()
+  })
+
+  it('preserves effort on custom endpoints and providers.custom', () => {
+    const withEffort: AiCustomEndpoint = {
+      ...ollama,
+      effort: 'high',
+    }
+    const out = sanitizeAiSettings({
+      provider: 'custom',
+      providers: { custom: { apiKey: '', model: 'm', effort: 'high' } },
+      customEndpoints: [withEffort],
+      customEndpoint: withEffort.id,
+    })
+    expect(out?.customEndpoints?.[0]?.effort).toBe('high')
+    expect(out?.providers.custom.effort).toBe('high')
+
+    const resolved = resolveCustomEndpoints({
+      ...defaultAiSettings(),
+      customEndpoints: [withEffort],
+      customEndpoint: withEffort.id,
+    })
+    expect(resolved.providers.custom.effort).toBe('high')
+  })
+})
+
+describe('prettyModelName and ollamaEndpointLabel', () => {
+  it('formats raw model tags cleanly', () => {
+    expect(prettyModelName('gemma-4-e4b-q4-0-it:latest')).toBe('Gemma 4 E4b')
+    expect(prettyModelName('qwen2.5:14b')).toBe('Qwen2.5 14b')
+    expect(prettyModelName('llama3.2:1b')).toBe('Llama3.2 1b')
+    expect(prettyModelName('deepseek-r1:8b')).toBe('Deepseek R1 8b')
+    expect(prettyModelName('mistral:latest')).toBe('Mistral')
+  })
+
+  it('formats endpoint labels with effort or legacy fallback', () => {
+    const epWithEffort: AiCustomEndpoint = {
+      ...ollama,
+      model: 'gemma-4-e4b-q4-0-it:latest',
+      effort: 'medium',
+    }
+    expect(ollamaEndpointLabel(epWithEffort)).toBe('Gemma 4 E4b medium')
+
+    const epWithoutEffort: AiCustomEndpoint = {
+      ...ollama,
+      name: 'Local / llama3',
+      model: 'llama3:latest',
+    }
+    expect(ollamaEndpointLabel(epWithoutEffort)).toBe('Local / llama3')
+  })
+})
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
+
+describe('streamOpenAiCompatible effort handling', () => {
+  it('injects preset temperature and options for low, medium, and high', async () => {
+    let sentBody: Record<string, unknown> = {}
+    const fetchMock = vi.fn().mockImplementation(async (_url: string, init: RequestInit) => {
+      sentBody = JSON.parse(init.body as string)
+      return okResponse(
+        sseStream([
+          'data: {"choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}]}',
+          'data: [DONE]',
+        ]),
+      )
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    // low effort
+    await streamOpenAiCompatible(
+      'http://localhost:11434/v1',
+      { apiKey: '', model: 'llama3.2', effort: 'low' },
+      'system',
+      [{ role: 'user', text: 'hi' }],
+      [],
+      1000,
+      { signal: new AbortController().signal, onDelta: () => {}, onToolCall: () => {} },
+    )
+    expect(sentBody.temperature).toBe(0.2)
+    expect(sentBody.options).toEqual({ num_ctx: 8192, num_predict: 1024 })
+
+    // high effort
+    await streamOpenAiCompatible(
+      'http://localhost:11434/v1',
+      { apiKey: '', model: 'llama3.2', effort: 'high' },
+      'system',
+      [{ role: 'user', text: 'hi' }],
+      [],
+      1000,
+      { signal: new AbortController().signal, onDelta: () => {}, onToolCall: () => {} },
+    )
+    expect(sentBody.temperature).toBe(0.8)
+    expect(sentBody.options).toEqual({ num_ctx: 32768, num_predict: 3072 })
+
+    // default without effort
+    await streamOpenAiCompatible(
+      'http://localhost:11434/v1',
+      { apiKey: '', model: 'llama3.2' },
+      'system',
+      [{ role: 'user', text: 'hi' }],
+      [],
+      1000,
+      { signal: new AbortController().signal, onDelta: () => {}, onToolCall: () => {} },
+    )
+    expect(sentBody.temperature).toBe(0.3)
+    expect(sentBody.options).toBeUndefined()
   })
 })

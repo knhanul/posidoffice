@@ -1,9 +1,10 @@
 import type { AgentMessage, AgentToolCall, AgentToolDef } from '@genoffice/agent-core'
 import { aiFetch } from '../fetch'
 import { httpBodyDetail } from '../http-error'
+import { OLLAMA_EFFORT_PRESETS } from '../custom-endpoints'
 import { opencodeSessionHeaders } from '../providers'
 import { modelEchoesReasoning } from '../registry'
-import type { AiChatResponse, AiProviderConfig } from '../types'
+import type { AiChatResponse, AiModelEffort, AiProviderConfig } from '../types'
 import { createStreamWatchdog, type StreamWatchdog } from '../watchdog'
 import {
   endpointUrl,
@@ -151,6 +152,8 @@ export interface OpenAiRequestOptions {
   useMaxCompletionTokens?: boolean | undefined
   /** vendor-specific fields merged into the request body (e.g. DeepSeek's `thinking`) */
   bodyExtras?: Record<string, unknown> | undefined
+  /** reasoning/context effort preset (used by Ollama and custom endpoints) */
+  effort?: AiModelEffort | undefined
 }
 
 export async function streamOpenAiCompatible(
@@ -196,6 +199,9 @@ async function openAiCompatibleTurn(
     wd.touch()
     cb.onActivity?.()
   }
+  const effort = config.effort ?? options.effort
+  const effortPreset = effort ? OLLAMA_EFFORT_PRESETS[effort] : undefined
+  const temperature = effortPreset ? effortPreset.temperature : 0.3
   const response = await aiFetch(endpointUrl(baseUrl, 'chat/completions'), {
     method: 'POST',
     signal: wd.signal,
@@ -218,7 +224,15 @@ async function openAiCompatibleTurn(
             })),
           }
         : {}),
-      ...(options.omitTemperature ? {} : { temperature: 0.3 }),
+      ...(options.omitTemperature ? {} : { temperature }),
+      ...(effortPreset
+        ? {
+            options: {
+              num_ctx: effortPreset.num_ctx,
+              num_predict: effortPreset.num_predict,
+            },
+          }
+        : {}),
       ...options.bodyExtras,
       stream: true,
       // OpenAI-class providers only report usage in a stream when asked (a final

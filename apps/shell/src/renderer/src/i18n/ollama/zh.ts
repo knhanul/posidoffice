@@ -22,4 +22,7 @@ export const zh = {
   loading: '正在读取设置…',
   retry: '重试',
   refresh: '测试连接并刷新模型列表',
+  effortLow: '低 (Low)',
+  effortMedium: '中 (Medium)',
+  effortHigh: '高 (High)',
 }

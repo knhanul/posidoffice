@@ -121,6 +121,8 @@ export interface AiSubscriptionUsage {
 /** Machine-readable cause of a failed run; one union shared with the renderer transport */
 export type AiRunErrorKind = IpcStreamErrorKind
 
+export type AiModelEffort = 'low' | 'medium' | 'high'
+
 export interface AiProviderConfig {
   apiKey: string
   model: string
@@ -128,6 +130,15 @@ export interface AiProviderConfig {
   baseUrl?: string | undefined
   /** optional Codex CLI override; empty means auto-detect the current authenticated install */
   cliPath?: string | undefined
+  /** optional reasoning/context effort preset (used by Ollama and OpenAI-compatible endpoints) */
+  effort?: AiModelEffort | undefined
+  /** connect timeout until the first response byte; unset falls back to AI_CONNECT_TIMEOUT_MS */
+  connectTimeoutMs?: number | undefined
+  /**
+   * image input support probed from the endpoint itself (Ollama `/api/show`);
+   * unset means not checked — the request path assumes images are accepted
+   */
+  vision?: boolean | undefined
 }
 
 /** One user-hosted OpenAI-compatible server; the active one is mirrored into `providers.custom` */
@@ -139,12 +150,38 @@ export interface AiCustomEndpoint {
   model: string
   /** ids the server advertised on the last `/models` probe, so the composer chip can list them offline */
   models?: string[] | undefined
+  effort?: AiModelEffort | undefined
+  /** connect timeout until the first response byte; Ollama endpoints default to OLLAMA_CONNECT_TIMEOUT_MS */
+  connectTimeoutMs?: number | undefined
+  /** image input probed via Ollama `/api/show` at registration; unset means not checked */
+  vision?: boolean | undefined
 }
 
 /** Live picker data returned by Codex app-server's model/list method. */
 export interface CodexModelCatalog {
   models: string[]
   defaultModel: string
+  /** Custom servers: a valid /models response, including an empty catalogue. */
+  reachable?: boolean | undefined
+}
+
+/** What an Ollama `POST /api/show` answered for one model. */
+export interface OllamaModelInfo {
+  /** `capabilities` contained "vision" — the model takes image input */
+  vision: boolean
+  /** capabilities as the server reported them; empty when the probe did not run (not Ollama, offline, unknown model) */
+  capabilities: string[]
+}
+
+/** Server metadata; only registered models enter the custom endpoint picker. */
+export interface AiOllamaServer {
+  id: string
+  name: string
+  baseUrl: string
+  apiKey: string
+  endpointIds: string[]
+  /** connect timeout until the first response byte, copied to registered endpoints */
+  connectTimeoutMs?: number | undefined
 }
 
 export interface AiProviderMeta {
@@ -257,6 +294,8 @@ export interface AiSettings {
   customEndpoints?: AiCustomEndpoint[] | undefined
   /** id of the endpoint `providers.custom` mirrors */
   customEndpoint?: string | undefined
+  /** Ollama servers, including servers with no registered models. */
+  ollamaServers?: AiOllamaServer[] | undefined
   /** Provider for generate_image / analyze_media. Absent (pre-media settings files) means the defaults. */
   media?: AiMediaSettings | undefined
   /** web/image search backend; absent means the keyless free chain */
@@ -285,6 +324,11 @@ export interface AiSettings {
   headlessSubscriptionConsentVersion?: number | undefined
   /** the first-connection notice has been shown; absent = false */
   subscriptionNoticeSeen?: boolean | undefined
+  /**
+   * "Let AI use internet tools" (decision 0062): only false turns the editors'
+   * outbound tools off; absent = on. The terminal command and MCP do not read it.
+   */
+  internetTools?: boolean | undefined
 }
 
 /** pre-provider settings shape (single OpenAI-compatible endpoint); migrated into "custom" */

@@ -1,9 +1,10 @@
 import type { AgentMessage, AgentToolCall, AgentToolDef } from '@genoffice/agent-core'
 import { aiFetch } from '../fetch'
 import { httpBodyDetail } from '../http-error'
+import { OLLAMA_EFFORT_PRESETS } from '../custom-endpoints'
 import { opencodeSessionHeaders } from '../providers'
 import { modelEchoesReasoning } from '../registry'
-import type { AiChatResponse, AiProviderConfig } from '../types'
+import type { AiChatResponse, AiModelEffort, AiProviderConfig } from '../types'
 import { createStreamWatchdog, type StreamWatchdog } from '../watchdog'
 import {
   endpointUrl,
@@ -151,6 +152,15 @@ export interface OpenAiRequestOptions {
   useMaxCompletionTokens?: boolean | undefined
   /** vendor-specific fields merged into the request body (e.g. DeepSeek's `thinking`) */
   bodyExtras?: Record<string, unknown> | undefined
+  /** reasoning/context effort preset (used by Ollama and custom endpoints) */
+  effort?: AiModelEffort | undefined
+}
+
+const usageRejectedGateways = new Set<string>()
+
+/** test hook */
+export function resetUsageRejectedGateways(): void {
+  usageRejectedGateways.clear()
 }
 
 export async function streamOpenAiCompatible(
@@ -163,16 +173,26 @@ export async function streamOpenAiCompatible(
   cb: StreamCallbacks,
   options: OpenAiRequestOptions = {},
 ): Promise<void> {
-  const wd = createStreamWatchdog(cb.signal)
+  if (
+    config.vision === false &&
+    messages.some((m) => m.role === 'user' && m.images && m.images.length > 0)
+  ) {
+    throw new Error(
+      'The selected model does not support image input. Remove the image and try again, or choose a model that supports images.',
+    )
+  }
+  const wd = createStreamWatchdog(cb.signal, config.connectTimeoutMs)
   return wd.guard(() =>
     openAiCompatibleTurn(baseUrl, config, system, messages, tools, maxTokens, cb, wd, {
       ...options,
-      requestUsage: true,
+      requestUsage: !usageRejectedGateways.has(baseUrl),
     }).catch((e) => {
       // Some gateways reject the (spec) stream_options field outright; a 400 that
-      // names it is retried once without it — those providers simply never report usage.
+      // names it is retried once without it, and the gateway is remembered so
+      // later turns skip the extra round trip — those providers never report usage.
       if (!/HTTP 4\d\d:[\s\S]*stream_options/i.test(e instanceof Error ? e.message : String(e)))
         throw e
+      usageRejectedGateways.add(baseUrl)
       return openAiCompatibleTurn(baseUrl, config, system, messages, tools, maxTokens, cb, wd, {
         ...options,
         requestUsage: false,
@@ -196,6 +216,9 @@ async function openAiCompatibleTurn(
     wd.touch()
     cb.onActivity?.()
   }
+  const effort = config.effort ?? options.effort
+  const effortPreset = effort ? OLLAMA_EFFORT_PRESETS[effort] : undefined
+  const temperature = effortPreset ? effortPreset.temperature : 0.3
   const response = await aiFetch(endpointUrl(baseUrl, 'chat/completions'), {
     method: 'POST',
     signal: wd.signal,
@@ -218,7 +241,15 @@ async function openAiCompatibleTurn(
             })),
           }
         : {}),
-      ...(options.omitTemperature ? {} : { temperature: 0.3 }),
+      ...(options.omitTemperature ? {} : { temperature }),
+      ...(effortPreset
+        ? {
+            options: {
+              num_ctx: effortPreset.num_ctx,
+              num_predict: effortPreset.num_predict,
+            },
+          }
+        : {}),
       ...options.bodyExtras,
       stream: true,
       // OpenAI-class providers only report usage in a stream when asked (a final

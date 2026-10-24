@@ -7,10 +7,12 @@ export type {
   AiMediaSettings,
   AiAnalysisProtocol,
   AiImageProtocol,
+  AiModelEffort,
   AiSearchProviderId,
   AiSearchProviderMeta,
   AiSearchSettings,
   CodexModelCatalog,
+  OllamaModelInfo,
   AiProviderConfig,
   AiProviderId,
   AiProviderMeta,
@@ -54,6 +56,18 @@ export {
   normalizeAiSettings,
 } from './legacy-settings'
 export {
+  SEALED_PREFIX,
+  isSealedSecret,
+  mapAiSecrets,
+  openAiSecrets,
+  openSecretValue,
+  sealAiSecrets,
+  sealSecretValue,
+  sealedAiSecretsIn,
+  setAiSecretCodec,
+} from './settings-secrets'
+export type { AiSecretCodec } from './settings-secrets'
+export {
   codexImageGenerationAvailable,
   configuredImageKeyProviders,
   imageProviderSelection,
@@ -61,6 +75,8 @@ export {
   setCodexImageGenerationAvailable,
 } from './image-backend'
 export type { AiImageBackend, AiImageBackendContext } from './image-backend'
+export { subscriptionConnectHelpUrl } from './connect-help'
+export type { SubscriptionConnectHelpPath } from './connect-help'
 export {
   SUBSCRIPTION_INSTALL_COMMANDS,
   SUBSCRIPTION_INSTALL_URLS,
@@ -102,9 +118,12 @@ export {
   resolveAiSettings,
 } from './providers'
 export {
+  OLLAMA_EFFORT_PRESETS,
   activeCustomEndpoint,
   customEndpointLabel,
   newCustomEndpointId,
+  ollamaEndpointLabel,
+  prettyModelName,
   removeCustomEndpoint,
   resolveCustomEndpoints,
   selectCustomEndpoint,
@@ -168,7 +187,9 @@ export {
   AI_CONNECT_TIMEOUT_MS,
   AI_IDLE_TIMEOUT_MS,
   AiTimeoutError,
+  connectTimeoutMsOf,
   createStreamWatchdog,
+  OLLAMA_CONNECT_TIMEOUT_MS,
 } from './watchdog'
 export type { StreamWatchdog } from './watchdog'
 export * from './user-skills'

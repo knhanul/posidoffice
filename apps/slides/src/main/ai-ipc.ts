@@ -22,6 +22,7 @@ import {
   type AiSettings,
   type AiStreamChunk,
   type AiStreamRequest,
+  sealAiSecrets,
 } from '@genoffice/ai-provider'
 import { shutdownCodexAppServers } from '@genoffice/ai-provider/codex-app-server'
 import {
@@ -48,10 +49,12 @@ import {
   type AiToolCallContext,
   type AiToolCapabilities,
 } from '@genoffice/ai-search'
-import { PRODUCT_NAME } from '@genoffice/i18n'
+import { getUiLang, PRODUCT_NAME } from '@genoffice/i18n'
 import { addPicture, editPictureSrcRect, replacePictureBytes } from '@genoffice/pptx-engine'
+import { rasterImageExt } from './media-mime'
 import { matchesElementRef } from '@genoffice/pptx-engine/identity'
 import { coverCropFractions } from '@genoffice/pipelines/slides'
+import { aiSubscriptionLoginWindowText } from '@genoffice/ui/ai-subscription-login-window'
 import type { AiRunFailure } from '../shared/ipc'
 import { EMU_PER_PX_96 } from '@genoffice/pptx-render'
 import { runAiStream, storedAiSettings, withMeteredAccepted } from './ai-stream'
@@ -143,11 +146,15 @@ export function registerAiIpc(): void {
   ensureSubscriptionIpc(ipcMain, {
     getSettings: readAiSettings,
     setMeteredAccepted: (provider, accepted) => {
-      writeJsonAtomic(AI_SETTINGS_PATH(), withMeteredAccepted(readAiSettings(), provider, accepted))
+      writeJsonAtomic(
+        AI_SETTINGS_PATH(),
+        sealAiSecrets(withMeteredAccepted(readAiSettings(), provider, accepted)),
+      )
       broadcastToWindows('ai:settings-changed')
     },
     dataDir: app.getPath('userData'),
     broadcast: broadcastToWindows,
+    loginWindowText: (provider) => aiSubscriptionLoginWindowText(getUiLang(), provider),
   })
 
   ipcMain.handle('ai:set-settings', (_event, settings: AiSettings) => {
@@ -159,12 +166,8 @@ export function registerAiIpc(): void {
       console.warn('[ai] rejected invalid ai:set-settings payload')
       return
     }
-    writeJsonAtomic(AI_SETTINGS_PATH(), sanitized)
+    writeJsonAtomic(AI_SETTINGS_PATH(), sealAiSecrets(sanitized))
     broadcastToWindows('ai:settings-changed')
-  })
-
-  ipcMain.handle('ai:log-run-failure', (_event, entry: AiRunFailure) => {
-    appendRunFailure(entry)
   })
 
   ipcMain.handle('ai:stream', async (event, request: AiStreamRequest) => {
@@ -255,6 +258,12 @@ export function registerAiIpc(): void {
 export function registerSlidesOnlyAiIpc(): void {
   // The design template remembered per document (slides:ai-template-selection-get / -set)
   registerTemplateSelectionIpc()
+
+  // Post-mortem log of a run with no usable reply. Only the slides panel sends it, so it lives
+  // here: docs-main's registerAiIpc (the one the shell runs) does not have this channel.
+  ipcMain.handle('ai:log-run-failure', (_event, entry: AiRunFailure) => {
+    appendRunFailure(entry)
+  })
 
   // What the search/image/media tools can do right now (settings + subscription connections):
   // the renderer offers the model only the tools that have a route.
@@ -366,8 +375,11 @@ export function registerSlidesOnlyAiIpc(): void {
           const resp = await fetchRemoteImage(String(op.url))
           if (!resp || !resp.ok) return null
           buf = Buffer.from(await readBodyCapped(resp, MAX_REMOTE_IMAGE_BYTES))
-          const ct = resp.headers.get('content-type') ?? ''
-          ext = ct.includes('png') ? 'png' : ct.includes('gif') ? 'gif' : 'jpg'
+          // magic bytes decide: a header-informed extension would happily store
+          // an HTML error page (or an attacker "image") as a .jpg in the deck
+          const kind = rasterImageExt(buf)
+          if (!kind) return null
+          ext = kind
         }
         const baseWidthPx = session.opened.deck.size.cx / EMU_PER_PX_96
         const scale = op.fitWidthPx / baseWidthPx
@@ -439,8 +451,9 @@ export function registerSlidesOnlyAiIpc(): void {
           const resp = await fetchRemoteImage(String(op.url))
           if (!resp || !resp.ok) return null
           buf = Buffer.from(await readBodyCapped(resp, MAX_REMOTE_IMAGE_BYTES))
-          const ct = resp.headers.get('content-type') ?? ''
-          ext = ct.includes('png') ? 'png' : ct.includes('gif') ? 'gif' : 'jpg'
+          const kind = rasterImageExt(buf)
+          if (!kind) return null
+          ext = kind
         }
         pushHistory(session)
         const ok = replacePictureBytes(

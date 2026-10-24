@@ -10,6 +10,7 @@ import type {
   AiStreamChunk,
   AiStreamRequest,
   CodexModelCatalog,
+  OllamaModelInfo,
   FreeAiConnectResult,
   FreeAiProviderId,
   FreeAiQuota,
@@ -52,6 +53,16 @@ export type UiTheme = 'light' | 'dark' | 'system'
  * behavior; 'light'/'dark' pin the paper regardless of the UI theme.
  */
 export type DocTheme = 'follow' | 'light' | 'dark'
+
+/** mirrors AUTHOR_NAME_MAX in @genoffice/electron-utils (the renderer cannot import it) */
+export const AUTHOR_NAME_MAX = 120
+
+export interface AuthorNameSetting {
+  /** stored override; '' means "use fallback" */
+  value: string
+  /** the OS account name */
+  fallback: string
+}
 
 /** shell-wide AutoSave default for every editor; updatedAt is 0 until first set */
 export interface AutoSaveDefault {
@@ -224,6 +235,12 @@ export interface HomeApi {
   kbOpenScope(group: string): Promise<string>
   /** the narrowed run is over */
   kbCloseScope(scope: string): Promise<void>
+  /** write the AI's markdown as a new .md / .docx in the save folder; resolves to its path */
+  kbCreateDocument(request: {
+    title: string
+    format: 'md' | 'docx'
+    content: string
+  }): Promise<{ path: string }>
   /** the user's AI provider settings (shared with every app's panel) */
   aiGetSettings(): Promise<AiSettings>
   /** one streamed model turn over the shared ai:stream handler */
@@ -337,6 +354,10 @@ export interface HomeApi {
   clearMcpLogs(): Promise<void>
   /** reveal the MCP log file in the file manager (created empty when missing) */
   openMcpLogFile(): Promise<void>
+  /** name on comments and tracked changes; `value` is the stored override ('' = use `fallback`, the OS account) */
+  getAuthorName(): Promise<AuthorNameSetting>
+  /** persist; broadcasts 'app:author-name-changed' (the effective name) to all web contents */
+  setAuthorName(value: string): Promise<AuthorNameSetting>
   /** AI panel text size + chat-input spellcheck (persisted in userData/app-settings.json) */
   getAiPanelPrefs(): Promise<AiPanelPrefs>
   /** merge + persist; broadcasts 'app:ai-panel-prefs-changed' to all web contents */
@@ -376,6 +397,8 @@ export interface HomeApi {
   getCodexModels(cliPath?: string): Promise<CodexModelCatalog>
   /** live model list advertised by a user-hosted OpenAI-compatible endpoint; empty when it cannot answer */
   getCustomModels(baseUrl: string, apiKey?: string): Promise<CodexModelCatalog>
+  /** one model's capabilities from Ollama's /api/show; empty capabilities means not checked (not Ollama, offline) */
+  getOllamaModelInfo(baseUrl: string, model: string, apiKey?: string): Promise<OllamaModelInfo>
   /** one-shot round trip against the given (possibly unsaved) settings — the settings-UI connection test */
   testAiSettings(settings: AiSettings): Promise<AiChatResponse>
   /** image generation / media analysis provider catalog */
@@ -542,6 +565,8 @@ export const HOME_CHANNELS = {
   getMcpLogs: 'home:get-mcp-logs',
   clearMcpLogs: 'home:clear-mcp-logs',
   openMcpLogFile: 'home:open-mcp-log-file',
+  getAuthorName: 'home:get-author-name',
+  setAuthorName: 'home:set-author-name',
   getAiPanelPrefs: 'home:get-ai-panel-prefs',
   setAiPanelPrefs: 'home:set-ai-panel-prefs',
   getDefaultSaveDir: 'home:get-default-save-dir',

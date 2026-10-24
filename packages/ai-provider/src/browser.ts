@@ -1,11 +1,14 @@
 /** Browser-safe settings surface. Keep Node-backed transports out of renderer bundles. */
 export type {
+  AiOllamaServer,
   AiCustomEndpoint,
+  AiModelEffort,
   AiProviderConfig,
   AiProviderId,
   AiProviderMeta,
   AiSettings,
   CodexModelCatalog,
+  OllamaModelInfo,
   AiAnalysisProviderSelection,
   AiImageProviderSelection,
   AiMediaKeyProviderId,
@@ -23,6 +26,8 @@ export type {
   AiUsageWindow,
   AiVideoAnalysisProviderSelection,
 } from './types'
+export { isLocalOllamaUrl, ollamaBaseUrl } from './ollama-servers'
+export { OLLAMA_CONNECT_TIMEOUT_MS } from './watchdog'
 export {
   AI_SUBSCRIPTION_PROVIDERS,
   isKeyProviderConfigured,
@@ -48,6 +53,8 @@ export {
   setCodexImageGenerationAvailable,
 } from './image-backend'
 export type { AiImageBackend, AiImageBackendContext } from './image-backend'
+export { subscriptionConnectHelpUrl } from './connect-help'
+export type { SubscriptionConnectHelpPath } from './connect-help'
 export {
   SUBSCRIPTION_INSTALL_COMMANDS,
   SUBSCRIPTION_INSTALL_URLS,
@@ -85,9 +92,12 @@ export {
   headlessSubscriptionOn,
 } from './providers'
 export {
+  OLLAMA_EFFORT_PRESETS,
   activeCustomEndpoint,
   customEndpointLabel,
   newCustomEndpointId,
+  ollamaEndpointLabel,
+  prettyModelName,
   removeCustomEndpoint,
   resolveCustomEndpoints,
   selectCustomEndpoint,

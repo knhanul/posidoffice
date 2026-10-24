@@ -13,7 +13,13 @@ import {
 import type { AiFontSize, AiPanelPrefs, AiPanelSide } from '@genoffice/ui'
 import { PRODUCT_CONTACT_EMAIL, PRODUCT_REPO_SLUG } from '@genoffice/i18n'
 import type { Lang } from '@genoffice/i18n'
-import type { DecisionEndpoint, DefaultAppStatus, FileSearchSettings } from '../../shared/home-api'
+import type {
+  AuthorNameSetting,
+  DecisionEndpoint,
+  DefaultAppStatus,
+  FileSearchSettings,
+} from '../../shared/home-api'
+import { AUTHOR_NAME_MAX } from '../../shared/home-api'
 import type { UpdateUiState } from '../../shared/update-api'
 import {
   DEFAULT_MAX_OUTPUT_TOKENS,
@@ -43,6 +49,8 @@ import type { AiCatalogEntry, DocTheme, UiTheme } from '../../shared/home-api'
 import { ProviderLogo } from './provider-logos'
 import { IntegrationsPane, skillUpdateDue } from './IntegrationsPane'
 import { AiSection, SubscriptionSummary } from './SettingsAiSection'
+import { OllamaPane } from './OllamaPane'
+import { ollamaText } from './i18n/strings-ollama'
 import { QuickLookField } from './SettingsQuickLook'
 import { ResultStoreField } from './SettingsResultStore'
 import { useSubscriptionConnection } from './subscription-client'
@@ -171,7 +179,7 @@ function CustomFontSizeInput({
 }
 
 export type SectionId =
-  'account' | 'aiModel' | 'aiMedia' | 'skills' | 'general' | 'integrations' | 'about'
+  'account' | 'aiModel' | 'ollama' | 'aiMedia' | 'skills' | 'general' | 'integrations' | 'about'
 
 /** a section labelled from the home dictionary, or by a feature's own dictionary */
 type SectionEntry = { id: SectionId } & (
@@ -182,6 +190,7 @@ const SECTIONS: readonly SectionEntry[] = [
   { id: 'account', labelKey: 'setSecAccount' },
   // one AI entry: 'aiMedia' stays a valid target and opens it on the Advanced media area
   { id: 'aiModel', labelKey: 'setSecAi' },
+  { id: 'ollama', label: (lang) => ollamaText(lang, 'title') },
   { id: 'skills', label: (lang) => skillsText(lang, 'navLabel') },
   { id: 'general', labelKey: 'setSecGeneral' },
   { id: 'integrations', labelKey: 'setSecIntegrations' },
@@ -189,6 +198,15 @@ const SECTIONS: readonly SectionEntry[] = [
 ]
 
 function SectionIcon({ id }: { id: SectionId }) {
+  if (id === 'ollama') {
+    return (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <rect x="2" y="2" width="12" height="5" rx="1" stroke="currentColor" />
+        <rect x="2" y="9" width="12" height="5" rx="1" stroke="currentColor" />
+        <path d="M4 4.5h2M4 11.5h2" stroke="currentColor" />
+      </svg>
+    )
+  }
   if (id === 'aiModel') {
     return (
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -897,6 +915,8 @@ function AiMediaPane({
   if (!settings?.media || !settings.search) return null
   const media: AiMediaSettings = settings.media
   const search: AiSearchSettings = settings.search
+  /** decision 0062: only an explicit false turns the editors' outbound tools off */
+  const internetToolsOn = settings.internetTools !== false
 
   const touch = () => {
     setDirty(true)
@@ -1295,6 +1315,26 @@ function AiMediaPane({
       </div>
       <div className="set-field-desc set-ai-note">{t('setAiSharedKeyHint')}</div>
       <section>
+        <div className="set-field">
+          <div className="set-field-text">
+            <div className="set-field-stack">
+              <div className="set-field-label">{t('setAiInternetTools')}</div>
+              <div className="set-field-desc">{t('setAiInternetToolsDesc')}</div>
+            </div>
+          </div>
+          <button
+            className="set-switch"
+            role="switch"
+            aria-checked={internetToolsOn}
+            aria-label={t('setAiInternetTools')}
+            onClick={() => {
+              setSettings({ ...settings, internetTools: !internetToolsOn })
+              touch()
+            }}
+          />
+        </div>
+      </section>
+      <section>
         {subhead('search', t('setAiCapSearch'))}
         {providerRow(t('setAiCapSearch'), search.provider, searchCatalog, (v) =>
           setSearch({ ...search, provider: v as AiSearchSettings['provider'] }),
@@ -1488,6 +1528,7 @@ export function SettingsModal({
   const [defaultAppBusy, setDefaultAppBusy] = useState(false)
   const [defaultAppFailed, setDefaultAppFailed] = useState(false)
   const [aiPrefs, setAiPrefs] = useState<AiPanelPrefs>(DEFAULT_AI_PANEL_PREFS)
+  const [authorName, setAuthorName] = useState<AuthorNameSetting>({ value: '', fallback: '' })
   const [channel, setChannel] = useState<'stable' | 'beta'>('stable')
   const [appVersion, setAppVersion] = useState('')
   const [updateState, setUpdateState] = useState<UpdateUiState | null>(null)
@@ -1513,6 +1554,9 @@ export function SettingsModal({
     })
     void window.aiOffice.getAiPanelPrefs?.().then((prefs) => {
       if (alive) setAiPrefs(prefs)
+    })
+    void window.aiOffice.getAuthorName?.().then((v) => {
+      if (alive) setAuthorName(v)
     })
     void window.aiOffice.getUpdateChannel?.().then((ch) => {
       if (alive) setChannel(ch)
@@ -1563,6 +1607,10 @@ export function SettingsModal({
   const updateAiPrefs = (patch: Partial<AiPanelPrefs>) => {
     setAiPrefs((prev) => ({ ...prev, ...patch }))
     void window.aiOffice.setAiPanelPrefs(patch).then(setAiPrefs)
+  }
+
+  const commitAuthorName = () => {
+    void window.aiOffice.setAuthorName?.(authorName.value).then(setAuthorName)
   }
 
   const changeSaveDir = () => {
@@ -1674,6 +1722,7 @@ export function SettingsModal({
                 }
               />
             )}
+            {section === 'ollama' && <OllamaPane />}
             {section === 'general' && (
               <>
                 <h3 className="set-pane-title">{t('setSecGeneral')}</h3>
@@ -1777,6 +1826,46 @@ export function SettingsModal({
                     aria-checked={aiPrefs.spellcheck}
                     aria-label={t('setAiSpellcheck')}
                     onClick={() => updateAiPrefs({ spellcheck: !aiPrefs.spellcheck })}
+                  />
+                </div>
+                <div className="set-field">
+                  <div className="set-field-text">
+                    <div className="set-field-stack">
+                      <div className="set-field-label">{t('setAiShowSidebar')}</div>
+                      <div className="set-field-desc">{t('setAiShowSidebarDesc')}</div>
+                    </div>
+                  </div>
+                  <button
+                    className="set-switch"
+                    role="switch"
+                    aria-checked={aiPrefs.showAiSidebar}
+                    aria-label={t('setAiShowSidebar')}
+                    onClick={() => updateAiPrefs({ showAiSidebar: !aiPrefs.showAiSidebar })}
+                  />
+                </div>
+                <div className="set-field">
+                  <div className="set-field-text">
+                    <div className="set-field-stack">
+                      <label className="set-field-label" htmlFor="set-author-name">
+                        {t('setAuthorName')}
+                      </label>
+                      <div className="set-field-desc">{t('setAuthorNameDesc')}</div>
+                    </div>
+                  </div>
+                  <input
+                    id="set-author-name"
+                    className="set-input"
+                    type="text"
+                    value={authorName.value}
+                    placeholder={authorName.fallback}
+                    maxLength={AUTHOR_NAME_MAX}
+                    spellCheck={false}
+                    autoComplete="off"
+                    onChange={(e) => setAuthorName((prev) => ({ ...prev, value: e.target.value }))}
+                    onBlur={commitAuthorName}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') e.currentTarget.blur()
+                    }}
                   />
                 </div>
                 <div className="set-field">

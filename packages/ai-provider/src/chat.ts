@@ -17,8 +17,12 @@ export async function chatForProvider(
   signal?: AbortSignal,
 ): Promise<AiChatResponse> {
   // non-streaming: the server generates the full answer before the headers arrive,
-  // so the connect phase gets the long budget; the body read then gets the idle budget
-  const wd = createStreamWatchdog(signal, AI_CHAT_RESPONSE_TIMEOUT_MS)
+  // so the connect phase gets the long budget; the body read then gets the idle budget.
+  // An endpoint's own timeout (e.g. a slow-loading Ollama server) can only widen it.
+  const wd = createStreamWatchdog(
+    signal,
+    Math.max(AI_CHAT_RESPONSE_TIMEOUT_MS, config.connectTimeoutMs ?? 0),
+  )
   const result = wd.guard(() => {
     let endpoint: ResolvedEndpoint
     try {

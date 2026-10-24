@@ -12,11 +12,13 @@
  * web-search handler, filename sanitizing like the style-template handler).
  */
 import { statSync } from 'node:fs'
+import { normalizeOllamaServers } from './ollama-servers'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 
 import { AI_SUBSCRIPTION_PROVIDERS, readUrlSettingsOf } from './providers'
 import { AI_PROVIDER_ADAPTERS, normalizeBaseUrl } from './registry'
+import { connectTimeoutMsOf } from './watchdog'
 import type {
   AiCustomEndpoint,
   AiProviderConfig,
@@ -93,6 +95,13 @@ function sanitizeProviderConfig(input: unknown): AiProviderConfig {
   }
   const cliPath = sanitizeCliPath(raw.cliPath)
   if (cliPath !== undefined) config.cliPath = cliPath
+  const effort = raw.effort
+  if (effort === 'low' || effort === 'medium' || effort === 'high') {
+    config.effort = effort
+  }
+  const connectTimeoutMs = connectTimeoutMsOf(raw.connectTimeoutMs)
+  if (connectTimeoutMs !== undefined) config.connectTimeoutMs = connectTimeoutMs
+  if (typeof raw.vision === 'boolean') config.vision = raw.vision
   return config
 }
 
@@ -143,6 +152,7 @@ function sanitizeCustomEndpoints(raw: unknown): AiCustomEndpoint[] {
           .slice(0, MAX_ENDPOINT_MODELS)
           .map((m) => m.slice(0, MAX_MODEL_LENGTH))
       : undefined
+    const effort = e.effort
     out.push({
       id,
       name: String(e.name ?? '').slice(0, MAX_ENDPOINT_NAME_LENGTH),
@@ -150,6 +160,11 @@ function sanitizeCustomEndpoints(raw: unknown): AiCustomEndpoint[] {
       apiKey: config.apiKey,
       model: config.model,
       ...(models && models.length > 0 ? { models } : {}),
+      ...(effort === 'low' || effort === 'medium' || effort === 'high' ? { effort } : {}),
+      ...(config.connectTimeoutMs !== undefined
+        ? { connectTimeoutMs: config.connectTimeoutMs }
+        : {}),
+      ...(config.vision !== undefined ? { vision: config.vision } : {}),
     })
   }
   return out
@@ -212,6 +227,8 @@ export function sanitizeAiSettings(input: unknown): AiSettings | null {
   if (typeof raw.subscriptionNoticeSeen === 'boolean') {
     settings.subscriptionNoticeSeen = raw.subscriptionNoticeSeen
   }
+  // only an explicit false is kept: anything else is the default, on
+  if (raw.internetTools === false) settings.internetTools = false
   // the read_url token is persisted in the settings file like the provider
   // keys; a blank or non-string token is left out (public pages only)
   const readUrl = readUrlSettingsOf(raw.readUrl)
@@ -219,6 +236,9 @@ export function sanitizeAiSettings(input: unknown): AiSettings | null {
     settings.readUrl = { githubToken: readUrl.githubToken.slice(0, MAX_API_KEY_LENGTH) }
   }
   const customEndpoints = sanitizeCustomEndpoints(raw.customEndpoints)
+  if (Array.isArray(raw.ollamaServers)) {
+    settings.ollamaServers = normalizeOllamaServers(raw.ollamaServers)
+  }
   if (customEndpoints.length > 0) {
     settings.customEndpoints = customEndpoints
     if (typeof raw.customEndpoint === 'string') {

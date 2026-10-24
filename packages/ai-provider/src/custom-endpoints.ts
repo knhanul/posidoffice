@@ -3,7 +3,26 @@
 // active entry is copied into that slot on every change: nothing downstream
 // learns about endpoints, and a settings file from before the list existed
 // still works because its single slot becomes the first entry.
-import type { AiCustomEndpoint, AiProviderConfig, AiSettings } from './types'
+import type { AiCustomEndpoint, AiModelEffort, AiProviderConfig, AiSettings } from './types'
+import { connectTimeoutMsOf, OLLAMA_CONNECT_TIMEOUT_MS } from './watchdog'
+
+export const OLLAMA_EFFORT_PRESETS: Record<
+  AiModelEffort,
+  { temperature: number; num_ctx: number; num_predict: number }
+> = {
+  low: { temperature: 0.2, num_ctx: 8192, num_predict: 1024 },
+  medium: { temperature: 0.5, num_ctx: 16384, num_predict: 2048 },
+  high: { temperature: 0.8, num_ctx: 32768, num_predict: 3072 },
+}
+
+export function prettyModelName(model: string): string {
+  return model
+    .replace(/:latest$/i, '')
+    .replace(/-q[0-9](?:_[0-9])?.*$/i, '')
+    .replace(/[:\-_]/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+    .trim()
+}
 
 const ID_ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789'
 
@@ -36,6 +55,10 @@ function normalizeEndpoints(raw: unknown): AiCustomEndpoint[] {
           ),
         ].filter(Boolean)
       : undefined
+    const effortRaw = e.effort
+    const effort =
+      effortRaw === 'low' || effortRaw === 'medium' || effortRaw === 'high' ? effortRaw : undefined
+    const connectTimeoutMs = connectTimeoutMsOf(e.connectTimeoutMs)
     out.push({
       id,
       name: str(e.name),
@@ -43,6 +66,9 @@ function normalizeEndpoints(raw: unknown): AiCustomEndpoint[] {
       apiKey: str(e.apiKey),
       model: str(e.model),
       ...(models && models.length > 0 ? { models } : {}),
+      ...(effort ? { effort } : {}),
+      ...(connectTimeoutMs !== undefined ? { connectTimeoutMs } : {}),
+      ...(typeof e.vision === 'boolean' ? { vision: e.vision } : {}),
     })
   }
   return out
@@ -74,13 +100,26 @@ export function resolveCustomEndpoints(settings: AiSettings): AiSettings {
   const active =
     endpoints.find((e) => e.id === str(settings.customEndpoint)) ??
     (endpoints[0] as AiCustomEndpoint)
+  // Ollama endpoints keep the longer connect timeout so a slow local model
+  // load does not trip the default; registered before the field existed, they
+  // fall back to the Ollama default through their owning server list.
+  const ollamaOwned = settings.ollamaServers?.some((s) => s.endpointIds.includes(active.id))
+  const connectTimeoutMs =
+    active.connectTimeoutMs ?? (ollamaOwned ? OLLAMA_CONNECT_TIMEOUT_MS : undefined)
   return {
     ...settings,
     customEndpoints: endpoints,
     customEndpoint: active.id,
     providers: {
       ...settings.providers,
-      custom: { apiKey: active.apiKey, model: active.model, baseUrl: active.baseUrl },
+      custom: {
+        apiKey: active.apiKey,
+        model: active.model,
+        baseUrl: active.baseUrl,
+        ...(active.effort ? { effort: active.effort } : {}),
+        ...(connectTimeoutMs !== undefined ? { connectTimeoutMs } : {}),
+        ...(active.vision !== undefined ? { vision: active.vision } : {}),
+      },
     },
   }
 }
@@ -130,4 +169,13 @@ export function customEndpointLabel(endpoint: AiCustomEndpoint, fallback: string
   } catch {
     return endpoint.baseUrl || fallback
   }
+}
+
+/** Display name for an Ollama endpoint: pretty model name + effort, or saved name for legacy entries. */
+export function ollamaEndpointLabel(endpoint: AiCustomEndpoint, fallback = 'Ollama'): string {
+  const pretty = prettyModelName(endpoint.model)
+  if (endpoint.effort) {
+    return `${pretty} ${endpoint.effort}`
+  }
+  return customEndpointLabel(endpoint, fallback)
 }

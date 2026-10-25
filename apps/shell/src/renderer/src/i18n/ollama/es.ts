@@ -38,5 +38,5 @@ export const es = {
   onboardingUnavailable: 'No se detectó ningún servidor Ollama en ejecución.',
   onboardingGuide:
     'Si Ollama no está instalado, instálelo desde el tablón interno de la empresa. Después, descargue un modelo en Ollama y actualice la lista en el administrador de modelos de IA para registrar el modelo que quiera usar.',
-  onboardingOpenManager: 'Abrir el administrador de modelos de Ollama',
+  onboardingOpenManager: 'Configuración de Ollama',
 } satisfies Record<keyof typeof zh, string>

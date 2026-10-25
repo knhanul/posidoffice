@@ -39,5 +39,5 @@ export const ja = {
   onboardingUnavailable: '実行中の Ollama サーバーが見つかりません。',
   onboardingGuide:
     'Ollama が未インストールの場合は、社内掲示板からインストールしてください。Ollama でモデルをダウンロードした後、AI モデル管理で一覧を更新し、使用するモデルを登録してください。',
-  onboardingOpenManager: 'Ollama モデル管理を開く',
+  onboardingOpenManager: 'Ollama 設定',
 } satisfies Record<keyof typeof zh, string>

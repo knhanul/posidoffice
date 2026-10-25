@@ -1635,7 +1635,7 @@ export function Home({
   }
 
   const selectFolder = (dir: string) => {
-    setSelectedFolder(dir)
+    setSelectedFolder((prev) => (prev === dir ? null : dir))
     setAskMode(false)
     setDriveMode(false)
     setSelected(new Set())
@@ -2175,6 +2175,7 @@ export function Home({
             if (!unavailable) selectFolder(entry.path)
           }}
           onDoubleClick={() => {
+            if (!unavailable && selectedFolder !== entry.path) setSelectedFolder(entry.path)
             if (showChevron) toggleExpanded(entry.path)
           }}
           onKeyDown={(e) => {
@@ -3076,6 +3077,27 @@ export function Home({
               renderSearchHeading()
             ) : (
               <div className="recents-heading folder-heading">
+                <button
+                  type="button"
+                  className="folder-back-recent-btn"
+                  onClick={() => changeView('recent')}
+                >
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                    <path
+                      d="M10 3.5L5.5 8l4.5 4.5"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  <span>{t('navRecent')}</span>
+                </button>
+                {selectedFolder && (
+                  <span className="folder-current-label" title={selectedFolder}>
+                    {fileName(selectedFolder) || selectedFolder}
+                  </span>
+                )}
                 <span className="file-count">
                   {t(total === 1 ? 'itemCountOne' : 'itemCount', { n: total })}
                 </span>
@@ -3109,8 +3131,8 @@ export function Home({
                 <span />
               </div>
               <ul className="recent-list">
-                {folderSubfolders.map((entry) => renderSubfolderRow(entry))}
                 {sortedFiles.map((entry) => renderFileRow(entry, 'folder'))}
+                {folderSubfolders.map((entry) => renderSubfolderRow(entry))}
               </ul>
             </div>
           )}

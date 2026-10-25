@@ -37,5 +37,5 @@ export const vi = {
   onboardingUnavailable: 'Không phát hiện máy chủ Ollama đang chạy.',
   onboardingGuide:
     'Nếu chưa cài Ollama, hãy cài đặt từ bảng tin nội bộ của công ty. Tải mô hình trong Ollama, sau đó làm mới danh sách và đăng ký mô hình cần dùng trong Trình quản lý mô hình AI.',
-  onboardingOpenManager: 'Mở trình quản lý mô hình Ollama',
+  onboardingOpenManager: 'Cài đặt Ollama',
 } satisfies Record<keyof typeof zh, string>

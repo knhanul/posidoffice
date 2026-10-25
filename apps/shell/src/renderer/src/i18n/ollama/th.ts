@@ -37,5 +37,5 @@ export const th = {
   onboardingUnavailable: 'ไม่พบเซิร์ฟเวอร์ Ollama ที่กำลังทำงาน',
   onboardingGuide:
     'หากยังไม่ได้ติดตั้ง Ollama ให้ติดตั้งจากกระดานข่าวภายในบริษัท จากนั้นดาวน์โหลดโมเดลใน Ollama แล้วรีเฟรชรายการและลงทะเบียนโมเดลที่ต้องการในตัวจัดการโมเดล AI',
-  onboardingOpenManager: 'เปิดตัวจัดการโมเดล Ollama',
+  onboardingOpenManager: 'การตั้งค่า Ollama',
 } satisfies Record<keyof typeof zh, string>

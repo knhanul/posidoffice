@@ -37,5 +37,5 @@ export const ar = {
   onboardingUnavailable: 'لم يتم العثور على خادم Ollama قيد التشغيل.',
   onboardingGuide:
     'إذا لم يكن Ollama مثبتًا، فثبّته من لوحة الإعلانات الداخلية للشركة. نزّل نموذجًا في Ollama، ثم حدّث القائمة وسجّل النموذج المطلوب في مدير نماذج الذكاء الاصطناعي.',
-  onboardingOpenManager: 'فتح مدير نماذج Ollama',
+  onboardingOpenManager: 'إعدادات Ollama',
 } satisfies Record<keyof typeof zh, string>

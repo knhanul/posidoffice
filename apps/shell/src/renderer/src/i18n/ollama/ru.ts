@@ -37,5 +37,5 @@ export const ru = {
   onboardingUnavailable: 'Работающий сервер Ollama не обнаружен.',
   onboardingGuide:
     'Если Ollama не установлен, установите его с внутренней корпоративной доски объявлений. Затем загрузите модель в Ollama, обновите список и зарегистрируйте нужную модель в диспетчере моделей ИИ.',
-  onboardingOpenManager: 'Открыть диспетчер моделей Ollama',
+  onboardingOpenManager: 'Настройки Ollama',
 } satisfies Record<keyof typeof zh, string>

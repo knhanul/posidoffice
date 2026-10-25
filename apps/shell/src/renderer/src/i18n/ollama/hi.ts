@@ -37,5 +37,5 @@ export const hi = {
   onboardingUnavailable: 'चलता हुआ Ollama सर्वर नहीं मिला।',
   onboardingGuide:
     'यदि Ollama इंस्टॉल नहीं है, तो इसे कंपनी के आंतरिक सूचना-पटल से इंस्टॉल करें। Ollama में मॉडल डाउनलोड करें, फिर AI मॉडल मैनेजर में सूची रीफ़्रेश करके उपयोग वाला मॉडल पंजीकृत करें।',
-  onboardingOpenManager: 'Ollama मॉडल मैनेजर खोलें',
+  onboardingOpenManager: 'Ollama सेटिंग्स',
 } satisfies Record<keyof typeof zh, string>

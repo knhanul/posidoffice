@@ -547,7 +547,7 @@ import {
   setDockHost,
   takeTornTab,
 } from './detached-windows'
-import { applyUpdateChannel, checkForUpdatesNow, initAutoUpdater } from './updater'
+import { applyUpdateChannel } from './updater'
 import { isUpdateChannel, type UpdateChannel } from '../shared/update-api'
 
 /**
@@ -4719,6 +4719,9 @@ function createShellWindow(): void {
   const win = new BrowserWindow({
     width: restored?.width ?? SHELL_WINDOW_DEFAULT_WIDTH,
     height: restored?.height ?? SHELL_WINDOW_DEFAULT_HEIGHT,
+    // stay hidden until the renderer has painted its first frame — the splash
+    // covers the gap, so the user never sees a blank shell window
+    show: false,
     // x/y only when a saved position survived validation; omitting them keeps
     // Electron's default placement on a first run
     ...(restored ? { x: restored.x, y: restored.y } : {}),
@@ -5068,7 +5071,12 @@ function createShellWindow(): void {
   } else {
     void win.loadFile(join(__dirname, '../renderer/index.html'))
   }
-  win.webContents.once('did-finish-load', () => {
+  win.once('ready-to-show', () => {
+    win.show()
+    closeSplashWindow()
+  })
+  win.webContents.once('did-fail-load', () => {
+    if (!win.isDestroyed()) win.show()
     closeSplashWindow()
   })
 }
@@ -8610,6 +8618,8 @@ app.whenReady().then(async () => {
     await runHeadlessExportEntry(headlessArgv)
     return
   }
+  // splash before the lock wait too: dev restarts can hold this for seconds
+  showSplashWindow()
   const lockData = () =>
     pendingLaunchPaths.length > 0
       ? { launchPath: pendingLaunchPaths[0], launchPaths: pendingLaunchPaths }
@@ -8642,7 +8652,6 @@ app.whenReady().then(async () => {
     app.quit()
     return
   }
-  showSplashWindow()
   // a subscription CLI a force-killed previous run left behind is ended, then
   // this run records the ones it starts (userData is final by now)
   void initSubscriptionChildTracking(app.getPath('userData')).catch(() => undefined)
@@ -9019,8 +9028,10 @@ app.whenReady().then(async () => {
   installBackToHomeItems()
   installDocumentLinkMenuItems()
   installDockMenu()
-  setUpdateCheckInvoker(() => void checkForUpdatesNow())
-  initAutoUpdater(() => shellWindow, currentUpdateChannel())
+  // PosidOffice: update checks and the update popup are disabled entirely —
+  // no invoker is registered and initAutoUpdater is never called, so the
+  // updater stays inactive (applyUpdateChannel then no-ops on channel changes)
+  setUpdateCheckInvoker(null)
   // crash record on this PC (crash-log.jsonl in userData) and, outside
   // headless runs, a prompt when the renderer of an open document dies
   const crashMemory = () =>

@@ -36,5 +36,5 @@ export const zhTW = {
   onboardingUnavailable: '未偵測到正在執行的 Ollama。',
   onboardingGuide:
     '如果尚未安裝 Ollama，請從公司內部公告欄安裝。接著在 Ollama 下載模型，再到 AI 模型管理員重新整理清單並註冊要使用的模型。',
-  onboardingOpenManager: '開啟 Ollama 模型管理員',
+  onboardingOpenManager: 'Ollama 設定',
 } satisfies Record<keyof typeof zh, string>

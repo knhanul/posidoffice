@@ -847,6 +847,9 @@ const config = {
       ? '${productName}-Setup-${version}-arm64.${ext}'
       : '${productName}-Setup-${version}.${ext}',
   },
+  portable: {
+    splashImage: 'build/portable-splash.bmp',
+  },
   beforePack: async (context) => {
     ensurePlatformHelpers()
     assertExtraResourceSources()

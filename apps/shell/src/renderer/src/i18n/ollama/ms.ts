@@ -37,5 +37,5 @@ export const ms = {
   onboardingUnavailable: 'Pelayan Ollama yang sedang berjalan tidak ditemukan.',
   onboardingGuide:
     'Jika Ollama belum dipasang, pasangkannya melalui papan kenyataan dalaman syarikat. Muat turun model dalam Ollama, kemudian segarkan senarai dan daftarkan model yang ingin digunakan dalam Pengurus Model AI.',
-  onboardingOpenManager: 'Buka Pengurus Model Ollama',
+  onboardingOpenManager: 'Tetapan Ollama',
 } satisfies Record<keyof typeof zh, string>

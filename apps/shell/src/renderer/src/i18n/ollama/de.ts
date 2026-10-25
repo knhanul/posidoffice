@@ -38,5 +38,5 @@ export const de = {
   onboardingUnavailable: 'Kein laufender Ollama-Server gefunden.',
   onboardingGuide:
     'Falls Ollama noch nicht installiert ist, installieren Sie es über das interne Firmen-Board. Laden Sie anschließend in Ollama ein Modell herunter und aktualisieren Sie im KI-Modellmanager die Modellliste, um das gewünschte Modell zu registrieren.',
-  onboardingOpenManager: 'Ollama-Modellmanager öffnen',
+  onboardingOpenManager: 'Ollama-Einstellungen',
 } satisfies Record<keyof typeof zh, string>

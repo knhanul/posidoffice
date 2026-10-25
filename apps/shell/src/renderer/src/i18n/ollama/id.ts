@@ -37,5 +37,5 @@ export const id = {
   onboardingUnavailable: 'Tidak menemukan server Ollama yang sedang berjalan.',
   onboardingGuide:
     'Jika Ollama belum terpasang, instal dari papan pengumuman internal perusahaan. Unduh model di Ollama, lalu segarkan daftar dan daftarkan model yang ingin digunakan di Pengelola Model AI.',
-  onboardingOpenManager: 'Buka pengelola model Ollama',
+  onboardingOpenManager: 'Pengaturan Ollama',
 } satisfies Record<keyof typeof zh, string>

@@ -37,5 +37,5 @@ export const pl = {
   onboardingUnavailable: 'Nie wykryto działającego serwera Ollama.',
   onboardingGuide:
     'Jeśli Ollama nie jest zainstalowane, zainstaluj je z wewnętrznej firmowej tablicy ogłoszeń. Pobierz model w Ollama, a następnie odśwież listę i zarejestruj wybrany model w menedżerze modeli AI.',
-  onboardingOpenManager: 'Otwórz menedżer modeli Ollama',
+  onboardingOpenManager: 'Ustawienia Ollama',
 } satisfies Record<keyof typeof zh, string>

@@ -37,5 +37,5 @@ export const cs = {
   onboardingUnavailable: 'Nebyl nalezen spuštěný server Ollama.',
   onboardingGuide:
     'Pokud Ollama není nainstalováno, nainstalujte jej z interní firemní nástěnky. Stáhněte model v Ollama, obnovte seznam a zaregistrujte požadovaný model ve správci modelů AI.',
-  onboardingOpenManager: 'Otevřít správce modelů Ollama',
+  onboardingOpenManager: 'Nastavení Ollama',
 } satisfies Record<keyof typeof zh, string>

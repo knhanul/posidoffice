@@ -35,5 +35,5 @@ export const zh = {
   onboardingUnavailable: '未检测到正在运行的 Ollama。',
   onboardingGuide:
     '如果尚未安装 Ollama，请从公司内部公告板安装。然后在 Ollama 中下载模型，再到 AI 模型管理器刷新模型列表并注册要使用的模型。',
-  onboardingOpenManager: '打开 Ollama 模型管理器',
+  onboardingOpenManager: 'Ollama 设置',
 }

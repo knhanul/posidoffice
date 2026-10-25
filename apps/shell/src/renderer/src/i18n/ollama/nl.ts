@@ -38,5 +38,5 @@ export const nl = {
   onboardingUnavailable: 'Geen actieve Ollama-server gevonden.',
   onboardingGuide:
     'Als Ollama nog niet is geïnstalleerd, installeer het dan via het interne bedrijfsprikbord. Download daarna een model in Ollama, vernieuw de lijst en registreer het gewenste model in AI-modelbeheer.',
-  onboardingOpenManager: 'Ollama-modelbeheer openen',
+  onboardingOpenManager: 'Ollama-instellingen',
 } satisfies Record<keyof typeof zh, string>

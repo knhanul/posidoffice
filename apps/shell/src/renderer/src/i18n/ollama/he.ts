@@ -36,5 +36,5 @@ export const he = {
   onboardingUnavailable: 'לא זוהה שרת Ollama פעיל.',
   onboardingGuide:
     'אם Ollama עדיין לא מותקן, התקינו אותו מלוח המודעות הפנימי של החברה. הורידו מודל ב-Ollama, רעננו את הרשימה ורשמו את המודל הרצוי במנהל מודלי ה-AI.',
-  onboardingOpenManager: 'פתיחת מנהל מודלי Ollama',
+  onboardingOpenManager: 'הגדרות Ollama',
 } satisfies Record<keyof typeof zh, string>

@@ -3,7 +3,9 @@
  * PosidOffice release build script.
  *
  *   node tools/build-posid.mjs [--version X.Y.Z] [--date YYYY-MM-DD]
- *                              [--target win|mac|linux] [--no-dist]
+ *                              [--target win|mac|linux|portable] [--no-dist]
+ *   (--target portable builds a single no-install Windows .exe instead of the
+ *   NSIS installer; settings still live in %APPDATA%\PosidOffice)
  *
  * - --version writes apps/shell/package.json's "version" before bundling. That
  *   is the exact string app.getVersion() returns, so it becomes the version
@@ -27,7 +29,7 @@ const shellDir = join(root, 'apps', 'shell')
 function usage(exitCode) {
   console.log(
     'Usage: node tools/build-posid.mjs [--version X.Y.Z] [--date YYYY-MM-DD] ' +
-      '[--target win|mac|linux] [--no-dist]',
+      '[--target win|mac|linux|portable] [--no-dist]',
   )
   process.exit(exitCode)
 }
@@ -49,8 +51,8 @@ for (let i = 0; i < args.length; i += 1) {
     usage(1)
   }
 }
-if (!['win', 'mac', 'linux'].includes(target)) {
-  console.error(`--target must be win, mac or linux (got "${target}")`)
+if (!['win', 'mac', 'linux', 'portable'].includes(target)) {
+  console.error(`--target must be win, mac, linux or portable (got "${target}")`)
   usage(1)
 }
 if (version && !/^\d+\.\d+\.\d+(-[\w.-]+)?$/.test(version)) {
@@ -88,5 +90,30 @@ run('npm', ['run', 'notices'])
 // electron-builder extraResources require every editor's out/ bundle and
 // packages/cli/dist/genoffice.cjs — build:all covers all of them
 run('npm', ['run', 'build:all'], root)
-if (runDist) run('npx', ['electron-builder', `--${target}`])
+// the Windows packages (installer and portable exe alike) expect the xlsx
+// sidecar under the -gnu target dir; native:build (inside build:all) only
+// produces target/release/
+if (runDist && (target === 'win' || target === 'portable')) {
+  run(
+    'cargo',
+    [
+      'build',
+      '--release',
+      '--manifest-path',
+      'native/xlsx-engine/Cargo.toml',
+      '--config',
+      'native/xlsx-engine/.cargo/config.toml',
+      '--target',
+      'x86_64-pc-windows-gnu',
+    ],
+    join(root, 'apps', 'sheets'),
+  )
+}
+if (runDist) {
+  if (target === 'portable') run('node', [join(root, 'tools', 'gen-portable-splash.mjs')], root)
+  run('npx', [
+    'electron-builder',
+    ...(target === 'portable' ? ['--win', 'portable'] : [`--${target}`]),
+  ])
+}
 console.log('done.')

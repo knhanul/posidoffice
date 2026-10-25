@@ -454,6 +454,8 @@ export interface NewFileOpts {
 
 // ── Folder tree (home "Folders" panel: the default save folder plus any folder the user added) ──
 
+export type FolderRootKind = 'save' | 'desktop' | 'documents' | 'downloads' | 'drive' | 'custom'
+
 export interface FolderRoot {
   path: string
   /** folder name shown on the root row */
@@ -464,6 +466,8 @@ export interface FolderRoot {
   readable: boolean
   /** an added folder: can be taken off the list; the default save folder cannot */
   removable: boolean
+  /** optional visual role for Explorer-style root rows */
+  kind?: FolderRootKind
 }
 
 export interface FolderEntry {

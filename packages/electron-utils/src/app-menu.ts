@@ -5,6 +5,30 @@ import type { MenuItemConstructorOptions, WebContents } from 'electron'
 import { brandText, getUiLang, PRODUCT_NAME, productName } from '@genoffice/i18n'
 import { baseLang, contextMenuLabels, type ContextMenuLabels } from './context-menu'
 
+declare const __GENOFFICE_BUILD_DATE__: string | undefined
+
+/** About dialog tagline, shown under the version line. `en` is the fallback
+ * for every locale that does not define its own text. */
+const ABOUT_TAGLINE: Record<string, string> = {
+  ko: '이음오피스(eumOffice)를 모체로 하되, 기존 AI 기능에 사내 로컬 LLM 환경(Ollama)을 연동하고 자체 커스터마이징을 거쳐 완성한 스마트 오피스 솔루션입니다.',
+  en: 'a smart office solution built on eumOffice, extended with an in-house local LLM environment (Ollama) alongside the original AI features through custom in-house modifications.',
+}
+
+function aboutDetail(version: string, name: string, lang: string, versionLabel: string): string {
+  const buildDate =
+    typeof __GENOFFICE_BUILD_DATE__ === 'string' && __GENOFFICE_BUILD_DATE__
+      ? ` · ${__GENOFFICE_BUILD_DATE__}`
+      : ''
+  const base = `${versionLabel} ${version}${buildDate}`
+  const tagline =
+    ABOUT_TAGLINE[lang] !== undefined
+      ? lang === 'ko'
+        ? `${name}는 ${ABOUT_TAGLINE[lang]}`
+        : `${name} ${ABOUT_TAGLINE[lang]}`
+      : `${name} is ${ABOUT_TAGLINE.en}`
+  return `${base}\n\n${tagline}`
+}
+
 export interface AppMenuLabels extends ContextMenuLabels {
   window: string
   minimize: string
@@ -620,21 +644,18 @@ export function aboutMenuItem(labels: AppMenuLabels): MenuItemConstructorOptions
   return {
     label: labels.about,
     click: async () => {
-      const { app, dialog, clipboard } = await import('electron')
+      const { app, dialog } = await import('electron')
       const version = app.getVersion()
-      const canCheck = updateCheckInvoker !== null
       const name = productName(getUiLang())
-      const { response } = await dialog.showMessageBox({
+      await dialog.showMessageBox({
         type: 'info',
         title: name,
         message: name,
-        detail: `${labels.version} ${version}`,
-        buttons: ['OK', labels.copy, ...(canCheck ? [labels.checkUpdates] : [])],
+        detail: aboutDetail(version, name, getUiLang(), labels.version),
+        buttons: ['OK'],
         defaultId: 0,
         cancelId: 0,
       })
-      if (response === 1) clipboard.writeText(`${PRODUCT_NAME} ${version}`)
-      if (response === 2) updateCheckInvoker?.()
     },
   }
 }
@@ -649,12 +670,12 @@ export function helpCheckUpdatesItems(
   return platform === 'darwin' ? [checkUpdatesMenuItem(labels)] : []
 }
 
-/** The tab bar's ☰ popup: the window's menus, then Check for Updates… on its own. */
+/** The tab bar's ☰ popup: the window's menus only (no update item). */
 export function appMenuPopupTemplate(
   menus: MenuItemConstructorOptions[],
-  labels: AppMenuLabels,
+  _labels: AppMenuLabels,
 ): MenuItemConstructorOptions[] {
-  return [...menus, { type: 'separator' }, checkUpdatesMenuItem(labels)]
+  return [...menus]
 }
 
 /** Help menu with Check for Updates… (macOS) + About; extra app-specific items

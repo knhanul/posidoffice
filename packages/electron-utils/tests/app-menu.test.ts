@@ -214,18 +214,11 @@ describe('checkUpdatesMenuItem / manual update check wiring', () => {
     expect(helpCheckUpdatesItems(en, 'darwin').map((i) => i.label)).toEqual([en.checkUpdates])
   })
 
-  it('ends the ☰ popup with the check on its own, after the window menus', () => {
+  it('shows only the window menus in the ☰ popup, with no update item', () => {
     const menus = [{ label: 'File', submenu: [] }, helpMenuTemplate(en, [], 'win32')]
     const popup = appMenuPopupTemplate(menus, en)
-    expect(popup.slice(0, 2)).toEqual(menus)
-    expect(popup[2]).toEqual({ type: 'separator' })
-    expect(popup[3]!.label).toBe(en.checkUpdates)
-    expect(popup).toHaveLength(4)
-
-    const invoke = vi.fn()
-    setUpdateCheckInvoker(invoke)
-    ;(popup[3] as { click: () => void }).click()
-    expect(invoke).toHaveBeenCalledOnce()
+    expect(popup).toEqual(menus)
+    expect(popup.map((i) => i.label)).not.toContain(en.checkUpdates)
   })
 
   it('invokes the shell-registered check on click, and no-ops unregistered', () => {
@@ -239,45 +232,23 @@ describe('checkUpdatesMenuItem / manual update check wiring', () => {
     expect(invoke).toHaveBeenCalledOnce()
   })
 
-  it('About dialog offers the check button only when a check is registered', async () => {
+  it('About dialog shows only the OK button', async () => {
     electronMock.showMessageBox.mockResolvedValue({ response: 0 })
     const about = aboutMenuItem(en) as { click: () => Promise<void> }
 
-    await about.click()
-    expect(electronMock.showMessageBox.mock.calls.at(-1)![0].buttons).toEqual(['OK', en.copy])
-
     setUpdateCheckInvoker(() => {})
     await about.click()
-    expect(electronMock.showMessageBox.mock.calls.at(-1)![0].buttons).toEqual([
-      'OK',
-      en.copy,
-      en.checkUpdates,
-    ])
-  })
-
-  it('About dialog third button triggers the registered check', async () => {
-    const invoke = vi.fn()
-    setUpdateCheckInvoker(invoke)
-    electronMock.showMessageBox.mockResolvedValue({ response: 2 })
-    await (aboutMenuItem(en) as { click: () => Promise<void> }).click()
-    expect(invoke).toHaveBeenCalledOnce()
-    expect(electronMock.writeText).not.toHaveBeenCalled()
-  })
-
-  it('About dialog copy button still copies name + version', async () => {
-    electronMock.showMessageBox.mockResolvedValue({ response: 1 })
-    await (aboutMenuItem(en) as { click: () => Promise<void> }).click()
-    expect(electronMock.writeText).toHaveBeenCalledWith('IeumOffice 1.2.3')
+    expect(electronMock.showMessageBox.mock.calls.at(-1)![0].buttons).toEqual(['OK'])
   })
 
   it('names the product in the About entry of every language', () => {
-    expect(en.about).toBe('About IeumOffice')
-    expect(appMenuLabels('ko').about).toBe('이음오피스 정보')
-    expect(appMenuLabels('ja').about).toBe('IeumOffice について')
+    expect(en.about).toBe('About PosidOffice')
+    expect(appMenuLabels('ko').about).toBe('PosidOffice 정보')
+    expect(appMenuLabels('ja').about).toBe('PosidOffice について')
     for (const lang of [...LANGS, 'vi']) {
       const about = appMenuLabels(lang).about
       expect(about, lang).not.toContain('GenOffice')
-      expect(about, lang).toContain(lang === 'ko' ? '이음오피스' : 'IeumOffice')
+      expect(about, lang).toContain(lang === 'ko' ? 'PosidOffice' : 'PosidOffice')
     }
   })
 
@@ -288,14 +259,14 @@ describe('checkUpdatesMenuItem / manual update check wiring', () => {
       setUiLang('en')
       await about.click()
       expect(electronMock.showMessageBox.mock.calls.at(-1)![0]).toMatchObject({
-        title: 'IeumOffice',
-        message: 'IeumOffice',
+        title: 'PosidOffice',
+        message: 'PosidOffice',
       })
       setUiLang('ko')
       await about.click()
       expect(electronMock.showMessageBox.mock.calls.at(-1)![0]).toMatchObject({
-        title: '이음오피스',
-        message: '이음오피스',
+        title: 'PosidOffice',
+        message: 'PosidOffice',
       })
     } finally {
       setUiLang('zh')

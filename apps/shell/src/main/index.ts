@@ -415,6 +415,8 @@ import {
 import {
   FOLDER_ROOTS_KEY,
   describeExtraRoot,
+  describeSystemRoot,
+  discoverLocalDriveRoots,
   readExtraRoots,
   withExtraRoot,
   withoutExtraRoot,
@@ -4148,17 +4150,52 @@ function extraFolderRoots(): string[] {
   return readExtraRoots(readAppSettings(APP_SETTINGS_PATH()), defaultSaveDir())
 }
 
+/** Explorer-style system roots (Desktop, Documents, Downloads, local drives) */
+function systemExplorerRoots(): FolderRoot[] {
+  const out: FolderRoot[] = []
+  const seen = new Set<string>([
+    resolve(defaultSaveDir()),
+    ...extraFolderRoots().map((p) => resolve(p)),
+  ])
+  const tryAdd = (root: FolderRoot | null) => {
+    if (!root) return
+    const key = resolve(root.path)
+    if (seen.has(key)) return
+    seen.add(key)
+    out.push(root)
+  }
+  const safeAppPath = (name: 'desktop' | 'documents' | 'downloads'): string | null => {
+    try {
+      return app.getPath(name)
+    } catch {
+      return null
+    }
+  }
+  const desktop = safeAppPath('desktop')
+  if (desktop) tryAdd(describeSystemRoot(desktop, 'desktop'))
+  const documents = safeAppPath('documents')
+  if (documents) tryAdd(describeSystemRoot(documents, 'documents'))
+  const downloads = safeAppPath('downloads')
+  if (downloads) tryAdd(describeSystemRoot(downloads, 'downloads'))
+  for (const drive of discoverLocalDriveRoots()) tryAdd(drive)
+  return out
+}
+
 function folderRootPaths(): string[] {
   return [defaultSaveDir(), ...extraFolderRoots()]
 }
 
+function allBrowsableRootPaths(): string[] {
+  return [defaultSaveDir(), ...extraFolderRoots(), ...systemExplorerRoots().map((r) => r.path)]
+}
+
 function insideAnyRoot(path: string): boolean {
-  return folderRootPaths().some((root) => isInsideRoot(root, path))
+  return allBrowsableRootPaths().some((root) => isInsideRoot(root, path))
 }
 
 function isAnyRoot(path: string): boolean {
   const key = resolve(path)
-  return folderRootPaths().some((root) => resolve(root) === key)
+  return allBrowsableRootPaths().some((root) => resolve(root) === key)
 }
 
 const pendingNewFileDir = new Map<string, { dir: string; setAt: number }>()
@@ -4688,6 +4725,9 @@ function createShellWindow(): void {
     minWidth: SHELL_WINDOW_MIN_WIDTH,
     minHeight: SHELL_WINDOW_MIN_HEIGHT,
     title: productName(currentLang()),
+    // dev runs the stock electron.exe, whose icon wins on the taskbar unless
+    // the window declares its own; packaged builds already use build/icon.ico
+    icon: join(__dirname, '../../build/icon.png'),
     // vibrancy: editor modules punch translucent regions (e.g. the slides
     // thumbnail pane) through to the desktop
     ...(process.platform === 'darwin'
@@ -6029,7 +6069,12 @@ function registerHomeIpc(): void {
 
   ipcMain.handle(HOME_CHANNELS.folderRoots, (): FolderRoot[] => {
     // describeRoot creates a missing save folder, so its watcher has something to attach to
-    const roots = [describeRoot(defaultSaveDir()), ...extraFolderRoots().map(describeExtraRoot)]
+    const saveRoot: FolderRoot = { ...describeRoot(defaultSaveDir()), kind: 'save' }
+    const extras: FolderRoot[] = extraFolderRoots().map((p) => ({
+      ...describeExtraRoot(p),
+      kind: 'custom',
+    }))
+    const roots = [saveRoot, ...systemExplorerRoots(), ...extras]
     ensureFolderWatchers()
     return roots
   })

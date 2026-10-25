@@ -20,6 +20,15 @@
   --logo-invert: 0;
   /* lift for the kb-ask composer box */
   --shadow-composer: 0 1px 3px rgb(0 0 0 / 5%);
+  --explorer-folder-back: #eab308;
+  --explorer-folder-front: #facc15;
+  --explorer-folder-stroke: #ca8a04;
+  --explorer-folder-badge: #0369a1;
+  --explorer-drive-body: #e2e8f0;
+  --explorer-drive-border: #64748b;
+  --explorer-desktop-screen: #bae6fd;
+  --explorer-desktop-border: #0284c7;
+  --explorer-tree-guide: rgb(100 116 139 / 26%);
 }
 
 /* ── Dark mode overrides ─────────────────────────────────── */
@@ -38,6 +47,15 @@
   --shadow-composer: 0 6px 30px rgb(0 0 0 / 30%);
   --logo-invert: 1;
   --shadow-composer: 0 1px 3px rgb(0 0 0 / 25%);
+  --explorer-folder-back: #ca8a04;
+  --explorer-folder-front: #eab308;
+  --explorer-folder-stroke: #facc15;
+  --explorer-folder-badge: #38bdf8;
+  --explorer-drive-body: #334155;
+  --explorer-drive-border: #94a3b8;
+  --explorer-desktop-screen: #0c4a6e;
+  --explorer-desktop-border: #38bdf8;
+  --explorer-tree-guide: rgb(148 163 184 / 24%);
 }
 
 /* System dark: no data-theme or data-theme="system" — follow OS preference */
@@ -55,6 +73,15 @@
     --shadow-composer: 0 6px 30px rgb(0 0 0 / 30%);
     --logo-invert: 1;
     --shadow-composer: 0 1px 3px rgb(0 0 0 / 25%);
+    --explorer-folder-back: #ca8a04;
+    --explorer-folder-front: #eab308;
+    --explorer-folder-stroke: #facc15;
+    --explorer-folder-badge: #38bdf8;
+    --explorer-drive-body: #334155;
+    --explorer-drive-border: #94a3b8;
+    --explorer-desktop-screen: #0c4a6e;
+    --explorer-desktop-border: #38bdf8;
+    --explorer-tree-guide: rgb(148 163 184 / 24%);
   }
 }
 
@@ -1179,6 +1206,21 @@ body.vib .home {
   padding: 0 2px;
 }
 
+.tree-children {
+  position: relative;
+}
+
+.tree-children::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 6px;
+  left: var(--tree-guide-x, 13px);
+  width: 1px;
+  background: var(--explorer-tree-guide);
+  pointer-events: none;
+}
+
 .tree-item {
   position: relative;
 }
@@ -1187,10 +1229,10 @@ body.vib .home {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 6px;
-  min-height: 32px;
-  padding: 4px 8px 4px 8px;
-  border-radius: 8px;
+  gap: 5px;
+  min-height: 26px;
+  padding: 2px 6px;
+  border-radius: 4px;
   margin-bottom: 1px;
   cursor: pointer;
   user-select: none;
@@ -1202,7 +1244,18 @@ body.vib .home {
 }
 
 .tree-row.active {
-  background: var(--bg-hover);
+  background: var(--accent-soft);
+}
+
+.tree-row.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 5px;
+  bottom: 5px;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--accent);
 }
 
 .tree-row.active .tree-name {
@@ -1210,8 +1263,8 @@ body.vib .home {
 }
 
 .tree-row:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: -2px;
+  outline: 1.5px solid var(--accent);
+  outline-offset: -1.5px;
 }
 
 /* drag hover: an inset ring in the accent color, same for sidebar and table rows */
@@ -1226,10 +1279,10 @@ body.vib .home {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   border: none;
-  border-radius: 4px;
+  border-radius: 3px;
   background: none;
   color: var(--text-muted);
   cursor: pointer;
@@ -1251,7 +1304,7 @@ body.vib .home {
 .tree-name {
   flex: 1;
   min-width: 0;
-  font-size: 14px;
+  font-size: 13px;
   color: var(--text);
   white-space: nowrap;
   overflow: hidden;

@@ -18,6 +18,7 @@ import { normalizeOllamaServers, ollamaBaseUrl } from '../src/ollama-servers'
 import { showOllamaModel } from '../src/custom-models'
 import { jsonResponse } from './test-utils'
 import type { AiCustomEndpoint } from '../src/types'
+import { explainOllamaSystemError, isOllamaOrCustomRequest } from '../src/ollama-friendly-error'
 
 const ollama: AiCustomEndpoint = {
   id: 'a',
@@ -301,14 +302,23 @@ describe('showOllamaModel', () => {
     expect(JSON.parse(String(fetchMock.mock.calls[0]![1]?.body))).toEqual({ model: 'gemma3' })
     expect(info).toEqual({ vision: true, capabilities: ['completion', 'thinking', 'vision'] })
 
-    vi.stubGlobal('fetch', vi.fn(async () => jsonResponse({ capabilities: ['completion'] })))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({ capabilities: ['completion'] })),
+    )
     expect((await showOllamaModel('http://localhost:11434/v1', 'llama3')).vision).toBe(false)
-    vi.stubGlobal('fetch', vi.fn(async () => jsonResponse({})))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({})),
+    )
     expect(await showOllamaModel('http://localhost:11434/v1', 'x')).toEqual({
       vision: false,
       capabilities: [],
     })
-    vi.stubGlobal('fetch', vi.fn(async () => Promise.reject(new Error('down'))))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => Promise.reject(new Error('down'))),
+    )
     expect(await showOllamaModel('http://localhost:11434/v1', 'x')).toEqual({
       vision: false,
       capabilities: [],
@@ -318,22 +328,121 @@ describe('showOllamaModel', () => {
   })
 })
 
-describe('streamOpenAiCompatible vision gating', () => {
-  it('refuses to send images to an endpoint probed vision:false', async () => {
+describe('streamOpenAiCompatible vision gating and friendly Ollama explanations', () => {
+  it('limits friendly system-error conversion to custom or local Ollama endpoints', () => {
+    expect(isOllamaOrCustomRequest('https://api.openai.com/v1')).toBe(false)
+    expect(isOllamaOrCustomRequest('https://custom.example/v1', true)).toBe(true)
+    expect(isOllamaOrCustomRequest('http://localhost:11434/v1')).toBe(true)
+  })
+
+  it('explains known Ollama system errors and leaves unknown errors unclassified', () => {
+    const config = { apiKey: '', model: 'llama3' }
+    const cases = [
+      ['CUDA error: out of memory', /GPU\/메모리 부족/],
+      ['HTTP 404: model "llama3" not found', /모델.*찾을 수 없습니다/],
+      ['prompt is too long for the model context', /입력 길이를 초과/],
+      ['fetch failed: ECONNREFUSED', /Ollama 서버에 연결할 수 없습니다/],
+    ] as const
+    for (const [message, expected] of cases) {
+      expect(
+        explainOllamaSystemError(new Error(message), config, [{ role: 'user', text: '요청' }]),
+      ).toMatch(expected)
+    }
+    expect(explainOllamaSystemError(new Error('invalid API key'), config)).toBeNull()
+  })
+
+  it('answers with a friendly explanation instead of throwing or calling fetch when vision is false', async () => {
     const fetchMock = vi.fn(async () => jsonResponse({}))
     vi.stubGlobal('fetch', fetchMock)
-    await expect(
-      streamOpenAiCompatible(
-        'http://localhost:11434/v1',
-        { apiKey: '', model: 'llama3', vision: false },
-        'sys',
-        [{ role: 'user', text: 'hi', images: [{ mime: 'image/png', base64: 'aGk=' }] }],
-        [],
-        100,
-        { signal: new AbortController().signal, onDelta: () => {}, onToolCall: () => {} },
-      ),
-    ).rejects.toThrow(/does not support image input/i)
+    const deltas: string[] = []
+    let stopReason: string | undefined
+    await streamOpenAiCompatible(
+      'http://localhost:11434/v1',
+      { apiKey: '', model: 'llama3', vision: false },
+      'sys',
+      [
+        {
+          role: 'user',
+          text: '이 슬라이드 꾸며줘',
+          images: [{ mime: 'image/png', base64: 'aGk=' }],
+        },
+      ],
+      [],
+      100,
+      {
+        signal: new AbortController().signal,
+        onDelta: (t) => deltas.push(t),
+        onToolCall: () => {},
+        onStopReason: (r) => {
+          stopReason = r
+        },
+      },
+    )
     expect(fetchMock).not.toHaveBeenCalled()
+    expect(deltas.join('')).toMatch(/이미지를 인식하지 못하는|cannot recognize images/i)
+    expect(deltas.join('')).toContain('llama3')
+    expect(stopReason).toBe('end_turn')
+  })
+
+  it('converts server multimodal rejection and timeout errors into friendly assistant replies for Ollama', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              error: {
+                message:
+                  'Multimodal data provided, but model does not support multimodal requests.',
+              },
+            }),
+            { status: 400 },
+          ),
+      ),
+    )
+    const deltas: string[] = []
+    await streamOpenAiCompatible(
+      'http://localhost:11434/v1',
+      { apiKey: '', model: 'gemma4' },
+      'sys',
+      [{ role: 'user', text: '요약해줘' }],
+      [],
+      100,
+      {
+        signal: new AbortController().signal,
+        onDelta: (t) => deltas.push(t),
+        onToolCall: () => {},
+      },
+      { isCustomProvider: true },
+    )
+    expect(deltas.join('')).toContain('이미지를 인식하지 못하는')
+    expect(deltas.join('')).toContain('Ollama')
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new Error(
+          'AI request timed out: no network activity for 300s. Check your connection and try again.',
+        )
+      }),
+    )
+    const timeoutDeltas: string[] = []
+    await streamOpenAiCompatible(
+      'http://localhost:11434/v1',
+      { apiKey: '', model: 'qwen3:32b', connectTimeoutMs: 300_000 },
+      'sys',
+      [{ role: 'user', text: '분석해줘' }],
+      [],
+      100,
+      {
+        signal: new AbortController().signal,
+        onDelta: (t) => timeoutDeltas.push(t),
+        onToolCall: () => {},
+      },
+      { isCustomProvider: true },
+    )
+    expect(timeoutDeltas.join('')).toContain('응답 대기 시간이 초과')
+    expect(timeoutDeltas.join('')).toContain('첫 응답 대기 시간')
   })
 
   it('still sends images when vision is true or unchecked', async () => {
@@ -341,7 +450,10 @@ describe('streamOpenAiCompatible vision gating', () => {
       const body = JSON.parse(init.body as string)
       expect(JSON.stringify(body.messages)).toContain('image_url')
       return okResponse(
-        sseStream(['data: {"choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}]}', 'data: [DONE]']),
+        sseStream([
+          'data: {"choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}]}',
+          'data: [DONE]',
+        ]),
       )
     })
     vi.stubGlobal('fetch', fetchMock)

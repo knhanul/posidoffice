@@ -2,6 +2,11 @@ import type { AgentMessage, AgentToolCall, AgentToolDef } from '@genoffice/agent
 import { aiFetch } from '../fetch'
 import { httpBodyDetail } from '../http-error'
 import { OLLAMA_EFFORT_PRESETS } from '../custom-endpoints'
+import {
+  explainOllamaSystemError,
+  explainOllamaVisionUnsupported,
+  isOllamaOrCustomRequest,
+} from '../ollama-friendly-error'
 import { opencodeSessionHeaders } from '../providers'
 import { modelEchoesReasoning } from '../registry'
 import type { AiChatResponse, AiModelEffort, AiProviderConfig } from '../types'
@@ -154,6 +159,8 @@ export interface OpenAiRequestOptions {
   bodyExtras?: Record<string, unknown> | undefined
   /** reasoning/context effort preset (used by Ollama and custom endpoints) */
   effort?: AiModelEffort | undefined
+  /** whether this turn came from the custom/Ollama provider slot */
+  isCustomProvider?: boolean | undefined
 }
 
 const usageRejectedGateways = new Set<string>()
@@ -177,28 +184,57 @@ export async function streamOpenAiCompatible(
     config.vision === false &&
     messages.some((m) => m.role === 'user' && m.images && m.images.length > 0)
   ) {
-    throw new Error(
-      'The selected model does not support image input. Remove the image and try again, or choose a model that supports images.',
-    )
+    cb.onDelta(explainOllamaVisionUnsupported(config, messages, system))
+    cb.onStopReason?.('end_turn')
+    return
   }
+  const friendlyEligible = isOllamaOrCustomRequest(baseUrl, options.isCustomProvider)
+  let emittedAnyDelta = false
+  const wrappedCb: StreamCallbacks = friendlyEligible
+    ? {
+        ...cb,
+        onDelta: (text) => {
+          emittedAnyDelta = true
+          cb.onDelta(text)
+        },
+      }
+    : cb
   const wd = createStreamWatchdog(cb.signal, config.connectTimeoutMs)
-  return wd.guard(() =>
-    openAiCompatibleTurn(baseUrl, config, system, messages, tools, maxTokens, cb, wd, {
-      ...options,
-      requestUsage: !usageRejectedGateways.has(baseUrl),
-    }).catch((e) => {
-      // Some gateways reject the (spec) stream_options field outright; a 400 that
-      // names it is retried once without it, and the gateway is remembered so
-      // later turns skip the extra round trip — those providers never report usage.
-      if (!/HTTP 4\d\d:[\s\S]*stream_options/i.test(e instanceof Error ? e.message : String(e)))
-        throw e
-      usageRejectedGateways.add(baseUrl)
-      return openAiCompatibleTurn(baseUrl, config, system, messages, tools, maxTokens, cb, wd, {
+  return wd
+    .guard(() =>
+      openAiCompatibleTurn(baseUrl, config, system, messages, tools, maxTokens, wrappedCb, wd, {
         ...options,
-        requestUsage: false,
-      })
-    }),
-  )
+        requestUsage: !usageRejectedGateways.has(baseUrl),
+      }).catch((e) => {
+        // Some gateways reject the (spec) stream_options field outright; a 400 that
+        // names it is retried once without it, and the gateway is remembered so
+        // later turns skip the extra round trip — those providers never report usage.
+        if (!/HTTP 4\d\d:[\s\S]*stream_options/i.test(e instanceof Error ? e.message : String(e)))
+          throw e
+        usageRejectedGateways.add(baseUrl)
+        return openAiCompatibleTurn(
+          baseUrl,
+          config,
+          system,
+          messages,
+          tools,
+          maxTokens,
+          wrappedCb,
+          wd,
+          {
+            ...options,
+            requestUsage: false,
+          },
+        )
+      }),
+    )
+    .catch((err) => {
+      if (!friendlyEligible || cb.signal.aborted) throw err
+      const friendly = explainOllamaSystemError(err, config, messages, system)
+      if (!friendly) throw err
+      cb.onDelta(emittedAnyDelta ? `\n\n${friendly}` : friendly)
+      cb.onStopReason?.('end_turn')
+    })
 }
 
 async function openAiCompatibleTurn(

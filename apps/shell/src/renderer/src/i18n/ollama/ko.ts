@@ -31,4 +31,11 @@ export const ko = {
   connectTimeout: '첫 응답 대기 시간 (분)',
   connectTimeoutHint: '모델을 메모리에 올리는 데 오래 걸리는 서버는 값을 늘리세요.',
   visionBadge: '비전',
+  onboardingChecking: '로컬 Ollama 연결을 확인하는 중…',
+  onboardingConnected: 'Ollama에 연결되었습니다.',
+  onboardingNoModels: 'Ollama에 연결했지만 다운로드된 모델이 없습니다.',
+  onboardingUnavailable: '실행 중인 Ollama 서버를 찾지 못했습니다.',
+  onboardingGuide:
+    'Ollama가 설치되어 있지 않다면 사내 게시판에서 설치해 주세요. Ollama에서 모델을 다운로드한 다음, AI 모델 관리자에서 모델 목록을 새로고침하고 사용할 모델을 등록해 주세요.',
+  onboardingOpenManager: 'Ollama 모델 관리자 열기',
 } satisfies Record<keyof typeof zh, string>

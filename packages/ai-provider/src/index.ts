@@ -192,4 +192,9 @@ export {
   OLLAMA_CONNECT_TIMEOUT_MS,
 } from './watchdog'
 export type { StreamWatchdog } from './watchdog'
+export {
+  explainOllamaSystemError,
+  explainOllamaVisionUnsupported,
+  isOllamaOrCustomRequest,
+} from './ollama-friendly-error'
 export * from './user-skills'

@@ -32,4 +32,11 @@ export const pt = {
   connectTimeout: 'Tempo limite da primeira resposta (minutos)',
   connectTimeoutHint: 'Aumente o valor em servidores que demoram a carregar os modelos.',
   visionBadge: 'Visão',
+  onboardingChecking: 'Verificando a conexão local do Ollama…',
+  onboardingConnected: 'Conectado ao Ollama.',
+  onboardingNoModels: 'Conectado, mas nenhum modelo foi baixado ainda.',
+  onboardingUnavailable: 'Nenhum servidor Ollama em execução foi detectado.',
+  onboardingGuide:
+    'Se o Ollama não estiver instalado, instale-o pelo mural interno da empresa. Baixe um modelo no Ollama e, em seguida, atualize a lista e registre o modelo desejado no gerenciador de modelos de IA.',
+  onboardingOpenManager: 'Abrir gerenciador de modelos do Ollama',
 } satisfies Record<keyof typeof zh, string>

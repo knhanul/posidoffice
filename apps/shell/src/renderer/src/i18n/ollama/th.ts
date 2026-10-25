@@ -31,4 +31,11 @@ export const th = {
   connectTimeout: 'เวลารอการตอบกลับครั้งแรก (นาที)',
   connectTimeoutHint: 'เพิ่มค่าสำหรับเซิร์ฟเวอร์ที่โหลดโมเดลช้า',
   visionBadge: 'ภาพ',
+  onboardingChecking: 'กำลังตรวจสอบการเชื่อมต่อ Ollama ในเครื่อง…',
+  onboardingConnected: 'เชื่อมต่อกับ Ollama แล้ว',
+  onboardingNoModels: 'เชื่อมต่อแล้ว แต่ยังไม่มีโมเดลที่ดาวน์โหลดไว้',
+  onboardingUnavailable: 'ไม่พบเซิร์ฟเวอร์ Ollama ที่กำลังทำงาน',
+  onboardingGuide:
+    'หากยังไม่ได้ติดตั้ง Ollama ให้ติดตั้งจากกระดานข่าวภายในบริษัท จากนั้นดาวน์โหลดโมเดลใน Ollama แล้วรีเฟรชรายการและลงทะเบียนโมเดลที่ต้องการในตัวจัดการโมเดล AI',
+  onboardingOpenManager: 'เปิดตัวจัดการโมเดล Ollama',
 } satisfies Record<keyof typeof zh, string>

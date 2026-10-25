@@ -31,4 +31,11 @@ export const en = {
   connectTimeout: 'First response timeout (minutes)',
   connectTimeoutHint: 'Raise this for servers that take a while to load models.',
   visionBadge: 'Vision',
+  onboardingChecking: 'Checking the local Ollama connection…',
+  onboardingConnected: 'Connected to Ollama.',
+  onboardingNoModels: 'Connected, but no model is downloaded yet.',
+  onboardingUnavailable: 'No running Ollama server was detected.',
+  onboardingGuide:
+    'If Ollama is not installed, install it from your company bulletin board. Download a model in Ollama, then refresh the model list and register the model in AI Model Manager.',
+  onboardingOpenManager: 'Open Ollama model manager',
 } satisfies Record<keyof typeof zh, string>

@@ -4,6 +4,7 @@ import { chatOpenAiCompatible } from './protocols/openai-compatible'
 import { ResponseBodyTooLargeError } from './protocols/shared'
 import { chatCodexAppServer } from './codex-app-server'
 import { chatClaudeCodeCli } from './claude-code-cli'
+import { explainOllamaSystemError, isOllamaOrCustomRequest } from './ollama-friendly-error'
 import { getProviderAdapter, type ResolvedEndpoint } from './registry'
 import type { AiChatResponse, AiProviderConfig, AiProviderSelection } from './types'
 import { AI_CHAT_RESPONSE_TIMEOUT_MS, createStreamWatchdog } from './watchdog'
@@ -23,6 +24,8 @@ export async function chatForProvider(
     signal,
     Math.max(AI_CHAT_RESPONSE_TIMEOUT_MS, config.connectTimeoutMs ?? 0),
   )
+  const userMessages = [{ role: 'user' as const, text: user }]
+  const friendlyEligible = isOllamaOrCustomRequest(config.baseUrl ?? '', provider === 'custom')
   const result = wd.guard(() => {
     let endpoint: ResolvedEndpoint
     try {
@@ -50,11 +53,24 @@ export async function chatForProvider(
         return chatOpenAiCompatible(wd, endpoint.baseUrl, config, system, user, {
           omitTemperature: endpoint.omitTemperature,
           bodyExtras: endpoint.bodyExtras,
+          isCustomProvider: provider === 'custom',
         })
     }
   })
-  return result.catch((e) => {
-    if (e instanceof ResponseBodyTooLargeError) return { ok: false as const, error: e.message }
-    throw e
-  })
+  return result
+    .then((res) => {
+      if (!res.ok && friendlyEligible && !signal?.aborted) {
+        const friendly = explainOllamaSystemError(res.error, config, userMessages, system)
+        if (friendly) return { ok: true as const, content: friendly }
+      }
+      return res
+    })
+    .catch((e) => {
+      if (friendlyEligible && !signal?.aborted) {
+        const friendly = explainOllamaSystemError(e, config, userMessages, system)
+        if (friendly) return { ok: true as const, content: friendly }
+      }
+      if (e instanceof ResponseBodyTooLargeError) return { ok: false as const, error: e.message }
+      throw e
+    })
 }

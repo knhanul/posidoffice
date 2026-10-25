@@ -31,4 +31,11 @@ export const ru = {
   connectTimeout: 'Тайм-аут первого ответа (минуты)',
   connectTimeoutHint: 'Увеличьте значение для серверов, долго загружающих модели.',
   visionBadge: 'Зрение',
+  onboardingChecking: 'Проверка подключения к локальному Ollama…',
+  onboardingConnected: 'Подключено к Ollama.',
+  onboardingNoModels: 'Подключение есть, но модели ещё не загружены.',
+  onboardingUnavailable: 'Работающий сервер Ollama не обнаружен.',
+  onboardingGuide:
+    'Если Ollama не установлен, установите его с внутренней корпоративной доски объявлений. Затем загрузите модель в Ollama, обновите список и зарегистрируйте нужную модель в диспетчере моделей ИИ.',
+  onboardingOpenManager: 'Открыть диспетчер моделей Ollama',
 } satisfies Record<keyof typeof zh, string>

@@ -127,7 +127,6 @@ body.vib .home {
   display: block;
   height: 28px;
   width: auto;
-  filter: invert(var(--logo-invert));
 }
 
 /* shown while RELEASE_IS_BETA */

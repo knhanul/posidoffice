@@ -316,6 +316,8 @@ export interface HomeApi {
   setUpdateChannel(channel: UpdateChannel): Promise<void>
   /** a tab asked for the settings modal (composer model chip → AI Model section) */
   onOpenSettings(handler: (target: { section: string }) => void): () => void
+  /** open the shell's Ollama model manager from first-run setup */
+  openOllamaSettings(): Promise<void>
   /** app version (from package.json / electron app.getVersion) */
   getAppVersion(): Promise<string>
   /** live updater state (null until an update was first seen); Settings → About */

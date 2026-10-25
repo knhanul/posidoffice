@@ -30,4 +30,11 @@ export const he = {
   connectTimeout: 'זמן קצוב לתגובה ראשונה (דקות)',
   connectTimeoutHint: 'הגדילו את הערך עבור שרתים שטוענים מודלים לאט.',
   visionBadge: 'ראייה',
+  onboardingChecking: 'בודק את החיבור המקומי ל-Ollama…',
+  onboardingConnected: 'מחובר ל-Ollama.',
+  onboardingNoModels: 'החיבור פעיל, אך עדיין לא הורד מודל.',
+  onboardingUnavailable: 'לא זוהה שרת Ollama פעיל.',
+  onboardingGuide:
+    'אם Ollama עדיין לא מותקן, התקינו אותו מלוח המודעות הפנימי של החברה. הורידו מודל ב-Ollama, רעננו את הרשימה ורשמו את המודל הרצוי במנהל מודלי ה-AI.',
+  onboardingOpenManager: 'פתיחת מנהל מודלי Ollama',
 } satisfies Record<keyof typeof zh, string>

@@ -65,6 +65,7 @@ export function settingsSupportVision(
     const provider = selectAiProvider(settings, statuses).provider
     if (!provider) return false
     if (!getProviderAdapter(provider).capabilities.vision) return false
+    if (settings.providers?.[provider]?.vision === false) return false
     return !modelLacksVision(settings.providers?.[provider]?.model ?? '')
   } catch {
     return false

@@ -78,9 +78,9 @@ describe('one product name', () => {
     }
   })
 
-  it('shows the Korean name only in the Korean UI', () => {
+  it('shows the product name in every UI language', () => {
     for (const lang of LANGS) {
-      expect(productName(lang), lang).toBe(lang === 'ko' ? '이음오피스' : PRODUCT_NAME)
+      expect(productName(lang), lang).toBe(PRODUCT_NAME)
     }
   })
 })
@@ -107,13 +107,13 @@ describe('the name in the shell UI', () => {
         expect(t(lang, key), `${lang}.${key}`).not.toContain(UPSTREAM_PRODUCT_NAME)
       }
     }
-    expect(t('ko', 'onbTitle1')).toContain('이음오피스')
-    expect(t('en', 'onbTitle1')).toContain('IeumOffice')
+    expect(t('ko', 'onbTitle1')).toContain('PosidOffice')
+    expect(t('en', 'onbTitle1')).toContain('PosidOffice')
   })
 
   it('names the product in the manual: titles and bodies', async () => {
-    expect(topicTitle('install', 'en')).toBe('Installing IeumOffice')
-    expect(topicTitle('install', 'ko')).toBe('이음오피스 설치')
+    expect(topicTitle('install', 'en')).toBe('Installing PosidOffice')
+    expect(topicTitle('install', 'ko')).toBe('PosidOffice 설치')
     for (const lang of ['en', 'ko', 'ja'] as const) {
       for (const topic of HELP_TOPICS) {
         expect(topicTitle(topic.id, lang)).not.toContain(UPSTREAM_PRODUCT_NAME)
@@ -122,8 +122,8 @@ describe('the name in the shell UI', () => {
       }
     }
     // file names keep the Latin name whatever the language
-    expect(await helpBody('install', 'ko')).toContain('IeumOffice-Setup-<version>.exe')
-    expect(await helpBody('getting-started', 'ko')).toContain('이음오피스')
+    expect(await helpBody('install', 'ko')).toContain('PosidOffice-Setup-<version>.exe')
+    expect(await helpBody('getting-started', 'ko')).toContain('PosidOffice')
   })
 })
 
@@ -148,8 +148,8 @@ describe('coexistence with the upstream app on one machine', () => {
     // packaged: Electron's default userData is <appData>/<productName>;
     // unpacked runs set DEV_USER_DATA_DIR_NAME explicitly (src/main/index.ts).
     // The single-instance lock lives in userData, so it is separate as well.
-    expect(USER_DATA_DIR_NAME).toBe('IeumOffice')
-    expect(DEV_USER_DATA_DIR_NAME).toBe('IeumOffice-Dev')
+    expect(USER_DATA_DIR_NAME).toBe('PosidOffice')
+    expect(DEV_USER_DATA_DIR_NAME).toBe('PosidOffice-Dev')
     const main = readFileSync(join(SHELL, 'src/main/index.ts'), 'utf8')
     expect(main).toContain(
       "app.setPath('userData', join(app.getPath('appData'), DEV_USER_DATA_DIR_NAME))",
@@ -180,7 +180,7 @@ describe('coexistence with the upstream app on one machine', () => {
     )
     expect(progIds.length).toBeGreaterThan(0)
     for (const progId of progIds) {
-      expect(progId).toMatch(/^IeumOffice\.[A-Za-z][A-Za-z0-9]*$/)
+      expect(progId).toMatch(/^PosidOffice\.[A-Za-z][A-Za-z0-9]*$/)
       // Windows limits a ProgId to 39 characters
       expect(progId.length, progId).toBeLessThanOrEqual(39)
       expect(UPSTREAM.progIds).not.toContain(progId)
@@ -200,7 +200,7 @@ describe('coexistence with the upstream app on one machine', () => {
     // the same derivation electron-builder.cjs applies to the Windows list;
     // the NSIS Open-With ProgId (build/installer.nsh) spells the same value out
     const progId = `${PRODUCT_NAME}.${entry!.name.replace(/[^A-Za-z0-9]/g, '')}`
-    expect(progId).toMatch(/^IeumOffice\.[A-Za-z][A-Za-z0-9]*$/)
+    expect(progId).toMatch(/^PosidOffice\.[A-Za-z][A-Za-z0-9]*$/)
     expect(progId.length, progId).toBeLessThanOrEqual(39)
     expect(UPSTREAM.progIds).not.toContain(progId)
     // the label is the product's own word for the type
@@ -223,7 +223,7 @@ describe('coexistence with the upstream app on one machine', () => {
     // the same derivation electron-builder.cjs applies to the Windows list;
     // the NSIS Open-With ProgId (build/installer.nsh) spells the same value out
     const progId = `${PRODUCT_NAME}.${entry!.name.replace(/[^A-Za-z0-9]/g, '')}`
-    expect(progId).toMatch(/^IeumOffice\.[A-Za-z][A-Za-z0-9]*$/)
+    expect(progId).toMatch(/^PosidOffice\.[A-Za-z][A-Za-z0-9]*$/)
     expect(progId.length, progId).toBeLessThanOrEqual(39)
     expect(UPSTREAM.progIds).not.toContain(progId)
     const winExts = config.win.fileAssociations.map((candidate: { ext: string }) => candidate.ext)

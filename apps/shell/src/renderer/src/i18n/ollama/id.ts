@@ -31,4 +31,11 @@ export const id = {
   connectTimeout: 'Batas waktu respons pertama (menit)',
   connectTimeoutHint: 'Naikkan nilai untuk server yang lambat memuat model.',
   visionBadge: 'Visi',
+  onboardingChecking: 'Memeriksa koneksi Ollama lokal…',
+  onboardingConnected: 'Terhubung ke Ollama.',
+  onboardingNoModels: 'Terhubung, tetapi belum ada model yang diunduh.',
+  onboardingUnavailable: 'Tidak menemukan server Ollama yang sedang berjalan.',
+  onboardingGuide:
+    'Jika Ollama belum terpasang, instal dari papan pengumuman internal perusahaan. Unduh model di Ollama, lalu segarkan daftar dan daftarkan model yang ingin digunakan di Pengelola Model AI.',
+  onboardingOpenManager: 'Buka pengelola model Ollama',
 } satisfies Record<keyof typeof zh, string>

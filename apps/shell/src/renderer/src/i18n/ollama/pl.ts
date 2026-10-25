@@ -31,4 +31,11 @@ export const pl = {
   connectTimeout: 'Limit czasu pierwszej odpowiedzi (minuty)',
   connectTimeoutHint: 'Zwiększ wartość dla serwerów, które długo ładują modele.',
   visionBadge: 'Wizja',
+  onboardingChecking: 'Sprawdzanie lokalnego połączenia Ollama…',
+  onboardingConnected: 'Połączono z Ollama.',
+  onboardingNoModels: 'Połączono, ale nie pobrano jeszcze żadnego modelu.',
+  onboardingUnavailable: 'Nie wykryto działającego serwera Ollama.',
+  onboardingGuide:
+    'Jeśli Ollama nie jest zainstalowane, zainstaluj je z wewnętrznej firmowej tablicy ogłoszeń. Pobierz model w Ollama, a następnie odśwież listę i zarejestruj wybrany model w menedżerze modeli AI.',
+  onboardingOpenManager: 'Otwórz menedżer modeli Ollama',
 } satisfies Record<keyof typeof zh, string>

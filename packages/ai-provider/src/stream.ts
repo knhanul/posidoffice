@@ -49,6 +49,7 @@ export async function streamForProvider(
           useMaxCompletionTokens: endpoint.useMaxCompletionTokens,
           bodyExtras: endpoint.bodyExtras,
           effort: config.effort ?? endpoint.effort,
+          isCustomProvider: provider === 'custom',
         })
     }
   })

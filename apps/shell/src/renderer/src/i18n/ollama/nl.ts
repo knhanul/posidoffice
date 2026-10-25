@@ -32,4 +32,11 @@ export const nl = {
   connectTimeout: 'Time-out eerste reactie (minuten)',
   connectTimeoutHint: 'Verhoog de waarde voor servers die modellen traag laden.',
   visionBadge: 'Visie',
+  onboardingChecking: 'Lokale Ollama-verbinding controleren…',
+  onboardingConnected: 'Verbonden met Ollama.',
+  onboardingNoModels: 'Verbonden, maar er is nog geen model gedownload.',
+  onboardingUnavailable: 'Geen actieve Ollama-server gevonden.',
+  onboardingGuide:
+    'Als Ollama nog niet is geïnstalleerd, installeer het dan via het interne bedrijfsprikbord. Download daarna een model in Ollama, vernieuw de lijst en registreer het gewenste model in AI-modelbeheer.',
+  onboardingOpenManager: 'Ollama-modelbeheer openen',
 } satisfies Record<keyof typeof zh, string>

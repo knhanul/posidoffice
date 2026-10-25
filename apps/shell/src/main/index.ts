@@ -57,7 +57,15 @@ import menuEpubIcon1x from './assets/menu-epub.png?asset'
 import menuEpubIcon2x from './assets/menu-epub@2x.png?asset'
 import menuHomeIcon1x from './assets/menu-home.png?asset'
 import menuHomeIcon2x from './assets/menu-home@2x.png?asset'
-import { createI18n, isLang, normalizeLang, setUiLang, type Lang } from '@genoffice/i18n'
+import posidSignatureAsset from './assets/posid-signature.png?asset'
+import {
+  createI18n,
+  isLang,
+  normalizeLang,
+  PRODUCT_NAME,
+  setUiLang,
+  type Lang,
+} from '@genoffice/i18n'
 import { DEV_USER_DATA_DIR_NAME, PRODUCT_CONTACT_EMAIL, productName } from '@genoffice/i18n'
 import {
   DEFAULT_SAVE_DIR_KEY,
@@ -4599,6 +4607,70 @@ function refreshTitleBarOverlay(): void {
   shellWindow.setTitleBarOverlay(tabStripOverlay(nativeTheme.shouldUseDarkColors, currentUiScale))
 }
 
+let splashWindow: BrowserWindow | null = null
+let splashShownAt = 0
+const SPLASH_MIN_MS = 900
+
+function showSplashWindow(): void {
+  if (splashWindow && !splashWindow.isDestroyed()) return
+  try {
+    const imgB64 = readFileSync(posidSignatureAsset).toString('base64')
+    const dark = nativeTheme.shouldUseDarkColors
+    const bg = dark ? '#1f2023' : '#ffffff'
+    const border = dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'
+    const track = dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.07)'
+    const html = `<!doctype html><html><head><meta charset="utf-8"><style>
+      *{box-sizing:border-box;margin:0;padding:0}
+      html,body{width:100%;height:100%;overflow:hidden;background:transparent;user-select:none;-webkit-app-region:drag;font-family:-apple-system,'Segoe UI',sans-serif}
+      .card{width:100%;height:100%;background:${bg};border:1px solid ${border};border-radius:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:32px 40px;box-shadow:0 16px 40px rgba(0,0,0,0.22)}
+      img{max-width:320px;width:82%;height:auto;display:block;-webkit-user-drag:none}
+      .bar{width:140px;height:3px;border-radius:999px;background:${track};overflow:hidden;position:relative}
+      .bar::after{content:'';position:absolute;inset:0;width:45%;border-radius:999px;background:linear-gradient(90deg,#f58220,#e53935);animation:slide 1.1s ease-in-out infinite}
+      @keyframes slide{0%{transform:translateX(-110%)}100%{transform:translateX(230%)}}
+    </style></head><body><div class="card"><img src="data:image/png;base64,${imgB64}" alt="PosidOffice"/><div class="bar"></div></div></body></html>`
+    const win = new BrowserWindow({
+      width: 460,
+      height: 230,
+      frame: false,
+      transparent: true,
+      resizable: false,
+      minimizable: false,
+      maximizable: false,
+      fullscreenable: false,
+      alwaysOnTop: true,
+      skipTaskbar: true,
+      center: true,
+      show: true,
+      title: PRODUCT_NAME,
+      webPreferences: {
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: true,
+      },
+    })
+    splashWindow = win
+    splashShownAt = Date.now()
+    win.once('closed', () => {
+      if (splashWindow === win) splashWindow = null
+    })
+    void win.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`)
+    setTimeout(() => closeSplashWindow(), 8000)
+  } catch {
+    // splash is best-effort
+  }
+}
+
+function closeSplashWindow(): void {
+  const win = splashWindow
+  if (!win || win.isDestroyed()) return
+  const elapsed = Date.now() - splashShownAt
+  const wait = Math.max(0, SPLASH_MIN_MS - elapsed)
+  setTimeout(() => {
+    if (!win.isDestroyed()) win.close()
+    if (splashWindow === win) splashWindow = null
+  }, wait)
+}
+
 function createShellWindow(): void {
   // Last session's geometry, when a display can still show it (issue #2049).
   // A saved position on an unplugged monitor falls back to the default
@@ -4956,6 +5028,9 @@ function createShellWindow(): void {
   } else {
     void win.loadFile(join(__dirname, '../renderer/index.html'))
   }
+  win.webContents.once('did-finish-load', () => {
+    closeSplashWindow()
+  })
 }
 
 // ---- routing: one dispatch function for every open path ----
@@ -8266,7 +8341,7 @@ app.on('second-instance', (_event, argv, _cwd, additionalData) => {
 installNavigationGuard(app)
 installContextMenu(app, () => contextMenuLabels(currentLang()))
 registerAiIpc()
-ipcMain.handle('ai:open-model-settings', () => {
+ipcMain.handle('ai:open-model-settings', (_event, requestedSection?: unknown) => {
   const win = shellWindow
   if (!win || win.isDestroyed()) return
   // the request may come from a detached window or while the shell is minimized
@@ -8274,7 +8349,9 @@ ipcMain.handle('ai:open-model-settings', () => {
   win.show()
   win.focus()
   tabManager?.openHomeTab()
-  win.webContents.send(HOME_CHANNELS.openSettings, { section: 'aiModel' })
+  win.webContents.send(HOME_CHANNELS.openSettings, {
+    section: requestedSection === 'ollama' ? 'ollama' : 'aiModel',
+  })
 })
 registerProjectIpc()
 registerDocsIpc()
@@ -8520,6 +8597,7 @@ app.whenReady().then(async () => {
     app.quit()
     return
   }
+  showSplashWindow()
   // a subscription CLI a force-killed previous run left behind is ended, then
   // this run records the ones it starts (userData is final by now)
   void initSubscriptionChildTracking(app.getPath('userData')).catch(() => undefined)
@@ -8876,7 +8954,7 @@ app.whenReady().then(async () => {
         withProject ? enabled : enabled.filter((skill) => skill.source !== 'project'),
         // not under userData: that folder is protected from sessions, and the
         // copied skills' scripts must be readable to run
-        join(process.env.LOCALAPPDATA ?? tmpdir(), 'IeumOffice', 'agent-skills'),
+        join(process.env.LOCALAPPDATA ?? tmpdir(), PRODUCT_NAME, 'agent-skills'),
       )
     },
     projectSkills: {

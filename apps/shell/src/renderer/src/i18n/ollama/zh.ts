@@ -29,4 +29,11 @@ export const zh = {
   connectTimeout: '首次响应超时（分钟）',
   connectTimeoutHint: '加载模型较慢的服务器可调大此值。',
   visionBadge: '视觉',
+  onboardingChecking: '正在检查本机 Ollama 连接…',
+  onboardingConnected: '已连接到 Ollama。',
+  onboardingNoModels: '已连接，但尚未下载模型。',
+  onboardingUnavailable: '未检测到正在运行的 Ollama。',
+  onboardingGuide:
+    '如果尚未安装 Ollama，请从公司内部公告板安装。然后在 Ollama 中下载模型，再到 AI 模型管理器刷新模型列表并注册要使用的模型。',
+  onboardingOpenManager: '打开 Ollama 模型管理器',
 }

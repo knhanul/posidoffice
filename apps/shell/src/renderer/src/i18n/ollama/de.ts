@@ -32,4 +32,11 @@ export const de = {
   connectTimeout: 'Zeitlimit für die erste Antwort (Minuten)',
   connectTimeoutHint: 'Erhöhen Sie den Wert für Server, die Modelle langsam laden.',
   visionBadge: 'Vision',
+  onboardingChecking: 'Lokale Ollama-Verbindung wird geprüft …',
+  onboardingConnected: 'Mit Ollama verbunden.',
+  onboardingNoModels: 'Verbunden, aber noch kein Modell heruntergeladen.',
+  onboardingUnavailable: 'Kein laufender Ollama-Server gefunden.',
+  onboardingGuide:
+    'Falls Ollama noch nicht installiert ist, installieren Sie es über das interne Firmen-Board. Laden Sie anschließend in Ollama ein Modell herunter und aktualisieren Sie im KI-Modellmanager die Modellliste, um das gewünschte Modell zu registrieren.',
+  onboardingOpenManager: 'Ollama-Modellmanager öffnen',
 } satisfies Record<keyof typeof zh, string>

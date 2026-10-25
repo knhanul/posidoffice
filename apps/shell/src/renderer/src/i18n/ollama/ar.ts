@@ -31,4 +31,11 @@ export const ar = {
   connectTimeout: 'مهلة الاستجابة الأولى (دقائق)',
   connectTimeoutHint: 'ارفع القيمة للخوادم التي تحمّل النماذج ببطء.',
   visionBadge: 'رؤية',
+  onboardingChecking: 'جارٍ التحقق من اتصال Ollama المحلي…',
+  onboardingConnected: 'تم الاتصال بـ Ollama.',
+  onboardingNoModels: 'تم الاتصال، لكن لم يتم تنزيل أي نموذج بعد.',
+  onboardingUnavailable: 'لم يتم العثور على خادم Ollama قيد التشغيل.',
+  onboardingGuide:
+    'إذا لم يكن Ollama مثبتًا، فثبّته من لوحة الإعلانات الداخلية للشركة. نزّل نموذجًا في Ollama، ثم حدّث القائمة وسجّل النموذج المطلوب في مدير نماذج الذكاء الاصطناعي.',
+  onboardingOpenManager: 'فتح مدير نماذج Ollama',
 } satisfies Record<keyof typeof zh, string>

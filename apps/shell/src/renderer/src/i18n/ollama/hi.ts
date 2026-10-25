@@ -31,4 +31,11 @@ export const hi = {
   connectTimeout: 'पहली प्रतिक्रिया समयसीमा (मिनट)',
   connectTimeoutHint: 'धीरे से मॉडल लोड करने वाले सर्वरों के लिए मान बढ़ाएँ.',
   visionBadge: 'दृष्टि',
+  onboardingChecking: 'स्थानीय Ollama कनेक्शन जाँचा जा रहा है…',
+  onboardingConnected: 'Ollama से कनेक्ट है।',
+  onboardingNoModels: 'कनेक्शन उपलब्ध है, लेकिन अभी कोई मॉडल डाउनलोड नहीं है।',
+  onboardingUnavailable: 'चलता हुआ Ollama सर्वर नहीं मिला।',
+  onboardingGuide:
+    'यदि Ollama इंस्टॉल नहीं है, तो इसे कंपनी के आंतरिक सूचना-पटल से इंस्टॉल करें। Ollama में मॉडल डाउनलोड करें, फिर AI मॉडल मैनेजर में सूची रीफ़्रेश करके उपयोग वाला मॉडल पंजीकृत करें।',
+  onboardingOpenManager: 'Ollama मॉडल मैनेजर खोलें',
 } satisfies Record<keyof typeof zh, string>

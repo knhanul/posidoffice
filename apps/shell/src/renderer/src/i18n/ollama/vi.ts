@@ -31,4 +31,11 @@ export const vi = {
   connectTimeout: 'Thời gian chờ phản hồi đầu tiên (phút)',
   connectTimeoutHint: 'Tăng giá trị cho các máy chủ tải mô hình chậm.',
   visionBadge: 'Thị giác',
+  onboardingChecking: 'Đang kiểm tra kết nối Ollama trên máy…',
+  onboardingConnected: 'Đã kết nối với Ollama.',
+  onboardingNoModels: 'Đã kết nối nhưng chưa tải mô hình nào.',
+  onboardingUnavailable: 'Không phát hiện máy chủ Ollama đang chạy.',
+  onboardingGuide:
+    'Nếu chưa cài Ollama, hãy cài đặt từ bảng tin nội bộ của công ty. Tải mô hình trong Ollama, sau đó làm mới danh sách và đăng ký mô hình cần dùng trong Trình quản lý mô hình AI.',
+  onboardingOpenManager: 'Mở trình quản lý mô hình Ollama',
 } satisfies Record<keyof typeof zh, string>

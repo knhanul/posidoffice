@@ -31,4 +31,11 @@ export const ms = {
   connectTimeout: 'Had masa respons pertama (minit)',
   connectTimeoutHint: 'Naikkan nilai untuk pelayan yang lambat memuatkan model.',
   visionBadge: 'Penglihatan',
+  onboardingChecking: 'Memeriksa sambungan Ollama setempat…',
+  onboardingConnected: 'Disambungkan ke Ollama.',
+  onboardingNoModels: 'Disambungkan, tetapi belum ada model yang dimuat turun.',
+  onboardingUnavailable: 'Pelayan Ollama yang sedang berjalan tidak ditemukan.',
+  onboardingGuide:
+    'Jika Ollama belum dipasang, pasangkannya melalui papan kenyataan dalaman syarikat. Muat turun model dalam Ollama, kemudian segarkan senarai dan daftarkan model yang ingin digunakan dalam Pengurus Model AI.',
+  onboardingOpenManager: 'Buka Pengurus Model Ollama',
 } satisfies Record<keyof typeof zh, string>

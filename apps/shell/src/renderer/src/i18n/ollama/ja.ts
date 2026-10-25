@@ -33,4 +33,11 @@ export const ja = {
   connectTimeout: '初回応答タイムアウト（分）',
   connectTimeoutHint: 'モデルの読み込みに時間がかかるサーバーでは値を大きくしてください。',
   visionBadge: 'ビジョン',
+  onboardingChecking: 'ローカル Ollama の接続を確認しています…',
+  onboardingConnected: 'Ollama に接続しました。',
+  onboardingNoModels: '接続しましたが、モデルがまだダウンロードされていません。',
+  onboardingUnavailable: '実行中の Ollama サーバーが見つかりません。',
+  onboardingGuide:
+    'Ollama が未インストールの場合は、社内掲示板からインストールしてください。Ollama でモデルをダウンロードした後、AI モデル管理で一覧を更新し、使用するモデルを登録してください。',
+  onboardingOpenManager: 'Ollama モデル管理を開く',
 } satisfies Record<keyof typeof zh, string>

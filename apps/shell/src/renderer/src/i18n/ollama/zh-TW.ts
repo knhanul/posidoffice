@@ -30,4 +30,11 @@ export const zhTW = {
   connectTimeout: '首次回應逾時（分鐘）',
   connectTimeoutHint: '載入模型較慢的伺服器可調大此值。',
   visionBadge: '視覺',
+  onboardingChecking: '正在檢查本機 Ollama 連線…',
+  onboardingConnected: '已連線至 Ollama。',
+  onboardingNoModels: '已連線，但尚未下載模型。',
+  onboardingUnavailable: '未偵測到正在執行的 Ollama。',
+  onboardingGuide:
+    '如果尚未安裝 Ollama，請從公司內部公告欄安裝。接著在 Ollama 下載模型，再到 AI 模型管理員重新整理清單並註冊要使用的模型。',
+  onboardingOpenManager: '開啟 Ollama 模型管理員',
 } satisfies Record<keyof typeof zh, string>

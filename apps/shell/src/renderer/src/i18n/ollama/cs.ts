@@ -31,4 +31,11 @@ export const cs = {
   connectTimeout: 'Časový limit první odpovědi (minuty)',
   connectTimeoutHint: 'Zvyšte hodnotu u serverů, které dlouho načítají modely.',
   visionBadge: 'Vidění',
+  onboardingChecking: 'Ověřuje se místní připojení k Ollama…',
+  onboardingConnected: 'Připojeno k Ollama.',
+  onboardingNoModels: 'Připojeno, ale zatím nebyl stažen žádný model.',
+  onboardingUnavailable: 'Nebyl nalezen spuštěný server Ollama.',
+  onboardingGuide:
+    'Pokud Ollama není nainstalováno, nainstalujte jej z interní firemní nástěnky. Stáhněte model v Ollama, obnovte seznam a zaregistrujte požadovaný model ve správci modelů AI.',
+  onboardingOpenManager: 'Otevřít správce modelů Ollama',
 } satisfies Record<keyof typeof zh, string>
